@@ -857,7 +857,7 @@ function showSection(id) {
 function renderPhotographers() {
   const days = ['M','T','W','T','F','S','S'];
   document.getElementById('phot-tbody').innerHTML = PHOTOGRAPHERS.map(p => {
-    const utilColor = p.util > 70 ? '#ff6584' : p.util > 40 ? '#f59e0b' : '#22c98a';
+    const shiftCount = WEEKLY_SHIFTS.filter(s => s.photographer === p.name).length;
     const statusBadge = p.status === 'Active'
       ? '<span class="badge badge-green">Active</span>'
       : '<span class="badge badge-grey">Inactive</span>';
@@ -874,7 +874,7 @@ function renderPhotographers() {
         <div><div class="avatar-name">${p.name}</div><div class="avatar-sub">${p.email}</div></div>
       </div></td>
       <td class="hide-mobile" style="color:var(--muted)">${p.phone}</td>
-      <td><strong>${p.shifts}</strong></td>
+      <td><strong>${shiftCount}</strong></td>
       <td>${statusBadge}</td>
       <td class="hide-mobile">${availDots}</td>
     </tr>`;
@@ -883,21 +883,26 @@ function renderPhotographers() {
 
 function renderRestaurants() {
   document.getElementById('rest-tbody').innerHTML = RESTAURANTS.map(r => {
-    const cvgClass = r.coverage === 'Covered' ? 'badge-green' : r.coverage === 'Partial' ? 'badge-yellow' : 'badge-red';
-    const photHtml = r.photographer === '—'
+    const shiftCount = WEEKLY_SHIFTS.filter(s => s.restaurant === r.name).length;
+    const assignedPhotographers = [...new Set(WEEKLY_SHIFTS.filter(s => s.restaurant === r.name).map(s => s.photographer))];
+    const coverage = shiftCount === 0 ? 'Uncovered' : assignedPhotographers.length > 0 ? 'Covered' : 'Partial';
+    const cvgClass = coverage === 'Covered' ? 'badge-green' : coverage === 'Partial' ? 'badge-yellow' : 'badge-red';
+    // show primary photographer (most shifts) or unassigned
+    const primaryPhot = assignedPhotographers[0] || '—';
+    const photHtml = primaryPhot === '—'
       ? '<span style="color:var(--muted)">— Unassigned</span>'
       : `<div class="avatar-row">
           <div class="avatar" style="background:#ede9ff;color:#6c63ff;width:24px;height:24px;font-size:0.6rem">
-            ${r.photographer.split(' ').map(n=>n[0]).join('')}
+            ${primaryPhot.split(' ').map(n=>n[0]).join('')}
           </div>
-          <span>${r.photographer}</span>
+          <span>${primaryPhot}${assignedPhotographers.length > 1 ? ` <span style="color:var(--muted);font-size:0.72rem">+${assignedPhotographers.length - 1}</span>` : ''}</span>
         </div>`;
     return `<tr onclick="openRestDrawer(${r.id})">
       <td><strong>${r.name}</strong></td>
       <td class="hide-mobile" style="color:var(--muted);font-size:0.78rem">${r.address}</td>
       <td>${photHtml}</td>
-      <td class="hide-mobile">${r.shifts > 0 ? r.shifts : '<span style="color:var(--muted)">0</span>'}</td>
-      <td><span class="badge ${cvgClass}">${r.coverage}</span></td>
+      <td class="hide-mobile">${shiftCount > 0 ? shiftCount : '<span style="color:var(--muted)">0</span>'}</td>
+      <td><span class="badge ${cvgClass}">${coverage}</span></td>
     </tr>`;
   }).join('');
 }
@@ -1187,7 +1192,6 @@ function confirmAssign(photId, dayName, dayIdx) {
 
   const dayIndex = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].indexOf(dayName);
   WEEKLY_SHIFTS.push({ day: dayIndex, dayName, photographer: p.name, restaurant, start, end });
-  p.shifts = WEEKLY_SHIFTS.filter(s => s.photographer === p.name).length;
 
   renderPhotographers();
   _renderPhotDrawer(photId, null);
@@ -1252,21 +1256,6 @@ function openRestDrawer(id) {
     <div class="drawer-section">
       <div class="drawer-section-title">Shifts This Week (${restShifts.length} scheduled)</div>
       ${restShifts.length > 0 ? weekHtml : `<div style="color:var(--muted);font-size:0.8rem;padding:8px 0">No shifts scheduled this week</div>`}
-    </div>
-    <div class="drawer-section">
-      <div class="drawer-section-title">Billing</div>
-      <div class="drawer-row"><span>Total invoices</span><strong>${invoicesForRest.length}</strong></div>
-      <div class="drawer-row"><span>Total billed</span><strong>$${totalBilled.toLocaleString()}</strong></div>
-      <div class="drawer-row"><span>Paid</span><strong>$${invoicesForRest.filter(i=>i.status==='Paid').reduce((s,i)=>s+i.amount,0).toLocaleString()}</strong></div>
-      <div class="drawer-row"><span>Outstanding</span><span style="color:#dc2626">$${invoicesForRest.filter(i=>i.status!=='Paid').reduce((s,i)=>s+i.amount,0).toLocaleString()}</span></div>
-    </div>
-    <div class="drawer-section">
-      <div class="drawer-section-title">Recent Invoices</div>
-      ${invoicesForRest.slice(0,4).map(i=>`
-        <div class="drawer-row">
-          <span style="font-family:monospace;font-size:0.78rem;color:var(--accent)">${i.id}</span>
-          <span>$${i.amount} · <span class="badge ${i.status==='Paid'?'badge-green':i.status==='Pending'?'badge-yellow':'badge-red'}" style="font-size:0.62rem">${i.status}</span></span>
-        </div>`).join('')}
     </div>
   `);
 }
