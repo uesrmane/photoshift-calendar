@@ -1,4 +1,4 @@
-a<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -148,6 +148,8 @@ a<!DOCTYPE html>
   .day-col.unavailable { opacity: 0.38; pointer-events: none; }
   .day-col.available .day-body { cursor: pointer; }
   .day-col.available .day-body:hover { background: #f4fdf9; }
+  .day-col.assigned-col { cursor: pointer; }
+  .day-col.assigned-col:hover .day-body { background: #deeefb; }
   .day-col.selected { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue-mid); }
 
   .day-head {
@@ -529,8 +531,9 @@ function render() {
     }
 
     const clickable = isAvail && !isPast && !shift;
+    const shiftData = shift ? encodeURIComponent(JSON.stringify(shift)) : null;
     html += `
-      <div class="${cls}" ${clickable ? `onclick="selectDay(${i})"` : ''}>
+      <div class="${cls}" ${shift ? `onclick="openSheet(JSON.parse(decodeURIComponent('${shiftData}')))" style="cursor:pointer;"` : clickable ? `onclick="selectDay(${i})"` : ''}>
         <div class="day-head">
           <div class="day-name">${DAYS[i]}</div>
           <div class="day-num${isToday?' today':''}">${date.getDate()}</div>
