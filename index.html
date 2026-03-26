@@ -1,715 +1,1095 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhotoShift — Schedule</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PhotoShift – Manager Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg: #f5f5f7;
-    --surface: #ffffff;
-    --surface2: #f0f0f2;
-    --border: #e0e0e3;
-    --border2: #d0d0d4;
-    --text: #111111;
-    --text2: #555558;
-    --text3: #999;
-    --blue: #185FA5;
-    --blue-light: #E6F1FB;
-    --blue-mid: #B5D4F4;
-    --blue-dark: #0C447C;
-    --green: #0F6E56;
-    --green-light: #E1F5EE;
-    --green-mid: #9FE1CB;
-    --amber-light: #FAEEDA;
-    --amber-dark: #633806;
-    --red: #A32D2D;
-    --radius: 10px;
-    --radius-sm: 6px;
-  }
+    :root {
+      --bg: #f4f6fb;
+      --sidebar: #ffffff;
+      --card: #ffffff;
+      --card2: #f0f2f8;
+      --accent: #6c63ff;
+      --accent-light: #ede9ff;
+      --accent2: #ff6584;
+      --accent3: #22c98a;
+      --accent4: #f59e0b;
+      --text: #1e2235;
+      --muted: #6b7280;
+      --border: #e2e6f0;
+    }
 
-  body {
-    font-family: 'Inter', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 0;
-    -webkit-font-smoothing: antialiased;
-    font-size: 17px;
-  }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+    }
 
-  .app {
-    max-width: 520px;
-    margin: 0 auto;
-    padding: 20px 16px 40px;
-  }
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 220px;
+      min-height: 100vh;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 0;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 10;
+    }
 
-  /* ── Header ── */
-  .app-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  .app-logo {
-    width: 32px; height: 32px;
-    background: var(--blue);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .app-logo svg { width: 18px; height: 18px; fill: #fff; }
-  .app-name { font-size: 17px; font-weight: 600; color: var(--text); }
-  .app-sub  { font-size: 12px; color: var(--text3); margin-left: auto; }
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #6c63ff, #ff6584);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .brand-text { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; }
+    .brand-sub { font-size: 0.68rem; color: var(--muted); }
 
-  /* ── Photographer card (top of detail) ── */
-  .photo-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .avatar {
-    width: 44px; height: 44px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 600;
-    flex-shrink: 0;
-  }
-  .photo-name { font-size: 17px; font-weight: 600; }
-  .photo-role { font-size: 14px; color: var(--text2); margin-top: 3px; }
-  .avail-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
-  .pill {
-    font-size: 11px; font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
-    background: var(--green-light);
-    color: var(--green);
-    letter-spacing: 0.02em;
-  }
+    .nav { display: flex; flex-direction: column; gap: 4px; padding: 20px 12px; flex: 1; }
 
-  /* ── Week nav ── */
-  .week-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  .week-label { font-size: 15px; font-weight: 600; color: var(--text); }
-  .nav-btns { display: flex; gap: 6px; }
-  .nav-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 4px 12px;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    color: var(--text);
-    cursor: pointer;
-    font-weight: 500;
-  }
-  .nav-btn:hover { background: var(--surface2); }
-  .nav-btn.today { color: var(--blue); border-color: var(--blue-mid); }
-  .nav-btn.today:disabled { opacity: 0.4; cursor: default; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all 0.15s;
+      border: none; background: none; text-align: left; width: 100%;
+    }
+    .nav-item:hover { background: var(--card2); color: var(--text); }
+    .nav-item.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+    .nav-icon { font-size: 1rem; width: 22px; text-align: center; flex-shrink: 0; }
+    .nav-badge {
+      margin-left: auto;
+      font-size: 0.65rem;
+      background: var(--accent2);
+      color: white;
+      padding: 1px 6px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
 
-  /* ── Legend ── */
-  .legend {
-    display: flex; gap: 14px; flex-wrap: wrap;
-    margin-bottom: 12px;
-  }
-  .leg { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text2); }
-  .leg-dot { width: 10px; height: 10px; border-radius: 3px; }
+    .sidebar-footer {
+      padding: 16px 20px 0;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .manager-pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 0;
+    }
+    .manager-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: linear-gradient(135deg, #6c63ff, #a49dff);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; color: white;
+    }
+    .manager-name { font-size: 0.8rem; font-weight: 600; color: var(--text); }
 
-  /* ── Calendar grid ── */
-  .cal-scroll-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-bottom: 14px;
-  }
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(58px, 1fr));
-    min-width: 420px;
-    gap: 5px;
-    margin-bottom: 0;
-  }
-  .day-col {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    background: var(--surface);
-  }
-  .day-col.available { border-color: var(--green-mid); }
-  .day-col.unavailable { opacity: 0.38; pointer-events: none; }
-  .day-col.available .day-body { cursor: pointer; }
-  .day-col.available .day-body:hover { background: #f4fdf9; }
-  .day-col.assigned-col { cursor: pointer; }
-  .day-col.assigned-col:hover .day-body { background: #deeefb; }
-  .day-col.selected { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue-mid); }
+    /* ── MAIN ── */
+    .main {
+      margin-left: 220px;
+      flex: 1;
+      padding: 28px;
+      min-height: 100vh;
+    }
 
-  .day-head {
-    padding: 6px 4px;
-    text-align: center;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-  }
-  .day-col.available .day-head { background: var(--green-light); border-bottom-color: var(--green-mid); }
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .page-title { font-size: 1.35rem; font-weight: 700; }
+    .page-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
 
-  .day-name {
-    font-size: 10px; font-weight: 600;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .day-num {
-    font-size: 18px; font-weight: 500;
-    color: var(--text); line-height: 1.3;
-  }
-  .day-num.today { color: var(--blue); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #5a52e0; }
+    .btn-outline { background: white; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { background: var(--card2); }
 
-  .day-body {
-    min-height: 72px;
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
+    /* page sections */
+    .section { display: none; }
+    .section.active { display: block; }
 
-  .shift-badge {
-    border-radius: 4px;
-    padding: 5px 6px;
-    font-size: 11px;
-    line-height: 1.4;
-  }
-  .shift-badge.assigned { background: var(--blue-light); color: var(--blue-dark); }
-  .shift-badge.new      { background: var(--amber-light); color: var(--amber-dark); }
-  .shift-time { font-size: 10px; font-weight: 600; }
-  .shift-rest { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .avail-tag  { font-size: 9px; color: var(--green); font-weight: 500; text-align: center; padding: 4px 0; }
+    /* ── KPI ROW ── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+      position: relative; overflow: hidden;
+    }
+    .kpi-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+    }
+    .kpi-card.c1::before { background: var(--accent); }
+    .kpi-card.c2::before { background: var(--accent3); }
+    .kpi-card.c3::before { background: var(--accent2); }
+    .kpi-card.c4::before { background: var(--accent4); }
+    .kpi-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .kpi-value { font-size: 1.8rem; font-weight: 700; line-height: 1; }
+    .kpi-sub { font-size: 0.72rem; color: var(--muted); margin-top: 5px; }
 
-  /* ── Assignment form ── */
-  .form-panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-top: 2px;
-    animation: slideIn 0.15s ease;
-  }
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .form-title {
-    font-size: 16px; font-weight: 600;
-    color: var(--text);
-    margin-bottom: 14px;
-  }
-  .form-row { margin-bottom: 12px; }
-  .form-label {
-    display: block;
-    font-size: 12px; font-weight: 600;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 5px;
-  }
-  select {
-    width: 100%;
-    font-size: 15px;
-    font-family: 'Inter', sans-serif;
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border2);
-    background: var(--surface);
-    color: var(--text);
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    padding-right: 30px;
-  }
-  select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-light); }
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+    .card-title {
+      font-size: 0.82rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
 
-  .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    /* ── SEARCH / FILTER ── */
+    .toolbar {
+      display: flex; gap: 10px; align-items: center;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 12px;
+      flex: 1; min-width: 180px; max-width: 280px;
+    }
+    .search-box input {
+      border: none; background: none; color: var(--text);
+      font-size: 0.83rem; outline: none; width: 100%;
+    }
+    .search-icon { color: var(--muted); font-size: 0.85rem; }
+    .filter-select {
+      background: var(--card2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px;
+      padding: 7px 12px; font-size: 0.82rem; cursor: pointer; outline: none;
+    }
 
-  .assign-btn {
-    width: 100%;
-    padding: 10px;
-    border-radius: var(--radius-sm);
-    border: none;
-    background: var(--blue);
-    color: #fff;
-    font-size: 15px;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    cursor: pointer;
-    margin-top: 4px;
-    letter-spacing: 0.01em;
-    transition: background 0.15s;
-  }
-  .assign-btn:hover { background: var(--blue-dark); }
+    /* ── TABLE ── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    .data-table th {
+      text-align: left; color: var(--muted); font-weight: 500;
+      padding: 9px 12px; border-bottom: 2px solid var(--border);
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+    .data-table td { padding: 11px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: middle; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tbody tr { cursor: pointer; transition: background 0.1s; }
+    .data-table tbody tr:hover { background: #f8f9ff; }
 
-  .cancel-link {
-    display: block;
-    text-align: center;
-    font-size: 12px;
-    color: var(--text3);
-    margin-top: 10px;
-    cursor: pointer;
-  }
-  .cancel-link:hover { color: var(--text2); }
+    /* ── AVATAR ── */
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.75rem; flex-shrink: 0;
+    }
+    .avatar-row { display: flex; align-items: center; gap: 10px; }
+    .avatar-name { font-weight: 600; }
+    .avatar-sub { font-size: 0.72rem; color: var(--muted); }
 
-  /* ── Success bar ── */
-  .success-bar {
-    background: var(--green-light);
-    color: var(--green);
-    border-radius: var(--radius-sm);
-    padding: 9px 12px;
-    font-size: 12px;
-    font-weight: 500;
-    margin-bottom: 12px;
-    display: none;
-    border: 1px solid var(--green-mid);
-  }
+    /* ── BADGE ── */
+    .badge {
+      font-size: 0.68rem; padding: 3px 9px;
+      border-radius: 20px; font-weight: 600; white-space: nowrap;
+    }
+    .badge-green  { background: #dcfce7; color: #16a34a; }
+    .badge-yellow { background: #fef3c7; color: #b45309; }
+    .badge-red    { background: #fee2e2; color: #dc2626; }
+    .badge-blue   { background: #ede9ff; color: #6c63ff; }
+    .badge-grey   { background: #f1f5f9; color: #64748b; }
 
-  /* ── Error bar ── */
-  .error-bar {
-    background: #FCEBEB;
-    color: var(--red);
-    border-radius: var(--radius-sm);
-    padding: 9px 12px;
-    font-size: 12px;
-    font-weight: 500;
-    margin-bottom: 12px;
-    display: none;
-    border: 1px solid #F7C1C1;
-  }
+    /* ── UTIL BAR ── */
+    .util-wrap { display: flex; align-items: center; gap: 8px; }
+    .util-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; min-width: 60px; }
+    .util-fill { height: 100%; border-radius: 3px; }
+    .util-pct { font-size: 0.72rem; color: var(--muted); min-width: 30px; text-align: right; }
 
+    /* ── DETAIL DRAWER ── */
+    .drawer-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.25); z-index: 100;
+    }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed; top: 0; right: -420px; bottom: 0;
+      width: 420px; max-width: 100vw;
+      background: white; border-left: 1px solid var(--border);
+      z-index: 101; transition: right 0.25s ease;
+      overflow-y: auto; padding: 28px;
+    }
+    .drawer.open { right: 0; }
+    .drawer-close {
+      position: absolute; top: 20px; right: 20px;
+      background: var(--card2); border: none; border-radius: 8px;
+      width: 30px; height: 30px; cursor: pointer;
+      font-size: 1rem; display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+    }
+    .drawer-close:hover { background: var(--border); }
+    .drawer-avatar-big {
+      width: 58px; height: 58px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 700; margin-bottom: 12px;
+    }
+    .drawer-name { font-size: 1.1rem; font-weight: 700; }
+    .drawer-role { font-size: 0.78rem; color: var(--muted); margin-bottom: 20px; }
+    .drawer-section { margin-bottom: 18px; }
+    .drawer-section-title {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--muted); font-weight: 600; margin-bottom: 10px;
+      padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    }
+    .drawer-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 0.83rem; }
+    .drawer-row span:first-child { color: var(--muted); }
+    .avail-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+    .avail-day { text-align: center; }
+    .avail-day-name { font-size: 0.6rem; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; }
+    .avail-dot {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.62rem; font-weight: 600; margin: 0 auto;
+    }
+    .avail-dot.yes { background: #dcfce7; color: #16a34a; }
+    .avail-dot.no  { background: #f1f5f9; color: #94a3b8; }
 
-  /* ── Bottom sheet ── */
-  .sheet-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.35);
-    z-index: 100;
-    animation: fadeIn 0.2s ease;
-  }
-  .sheet-overlay.open { display: block; }
-  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    /* ── GRID 2 ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+    @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } .sidebar { width: 60px; } .main { margin-left: 60px; } .brand-text, .brand-sub, .nav-item span:not(.nav-icon) { display: none; } }
 
-  .bottom-sheet {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    background: var(--surface);
-    border-radius: 16px 16px 0 0;
-    padding: 0 20px 32px;
-    z-index: 101;
-    transform: translateY(100%);
-    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-    max-width: 520px;
-    margin: 0 auto;
-  }
-  .bottom-sheet.open { transform: translateY(0); }
-  .sheet-handle {
-    width: 36px; height: 4px;
-    background: var(--border2);
-    border-radius: 2px;
-    margin: 12px auto 20px;
-  }
-  .sheet-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
-  .sheet-row {
-    display: flex; justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 0.5px solid var(--border);
-    font-size: 15px;
-  }
-  .sheet-row:last-of-type { border-bottom: none; }
-  .sheet-row-label { color: var(--text2); font-weight: 500; }
-  .sheet-row-value { color: var(--text); font-weight: 500; }
-  .sheet-status {
-    font-size: 11px; font-weight: 600;
-    padding: 3px 10px; border-radius: 20px;
-    background: var(--blue-light); color: var(--blue-dark);
-  }
-  .sheet-delete-btn {
-    width: 100%; margin-top: 20px;
-    padding: 11px; border-radius: var(--radius-sm);
-    border: 1px solid #F7C1C1;
-    background: #FCEBEB; color: var(--red);
-    font-size: 13px; font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .sheet-delete-btn:hover { background: #F7C1C1; }
+    .chart-wrap { position: relative; height: 230px; }
 
-  /* ── Loading ── */
-  .loading {
-    text-align: center;
-    padding: 40px 0;
-    font-size: 13px;
-    color: var(--text3);
-  }
-</style>
+    /* ── INVENTORY SPECIFIC ── */
+    .inv-icon { font-size: 1.2rem; margin-right: 4px; }
+    .condition-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .cond-good { background: #22c98a; }
+    .cond-fair { background: #f59e0b; }
+    .cond-poor { background: #ff6584; }
+
+    /* ── BILLING SPECIFIC ── */
+    .amount-col { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .overdue { color: #dc2626; }
+
+    .empty-state {
+      text-align: center; padding: 40px 20px;
+      color: var(--muted); font-size: 0.85rem;
+    }
+    .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+  </style>
 </head>
 <body>
-<div class="app">
 
-  <div class="app-header">
-    <div class="app-logo">
-      <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2zm0 12c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/></svg>
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">📸</div>
+    <div>
+      <div class="brand-text">PhotoShift</div>
+      <div class="brand-sub">Manager Portal</div>
     </div>
-    <span class="app-name">PhotoShift</span>
-    <span class="app-sub" id="app-sub">Schedule</span>
+  </div>
+  <nav class="nav">
+    <button class="nav-item active" onclick="showSection('photographers')">
+      <span class="nav-icon">👥</span>
+      <span>Photographers</span>
+    </button>
+    <button class="nav-item" onclick="showSection('restaurants')">
+      <span class="nav-icon">🍽️</span>
+      <span>Restaurants</span>
+    </button>
+    <button class="nav-item" onclick="showSection('inventory')">
+      <span class="nav-icon">🎒</span>
+      <span>Inventory</span>
+    </button>
+    <button class="nav-item" onclick="showSection('billing')">
+      <span class="nav-icon">💳</span>
+      <span>Billing</span>
+      <span class="nav-badge" id="billing-badge">3</span>
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="manager-pill">
+      <div class="manager-avatar">MG</div>
+      <div>
+        <div class="manager-name">Morgan G.</div>
+        <div>Manager</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- ══ PHOTOGRAPHERS ══ -->
+  <div class="section active" id="section-photographers">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Photographers</div>
+        <div class="page-sub">Manage your team and track weekly availability</div>
+      </div>
+      <button class="btn btn-primary">＋ Add Photographer</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card c1"><div class="kpi-label">Total</div><div class="kpi-value">8</div><div class="kpi-sub">on the team</div></div>
+      <div class="kpi-card c2"><div class="kpi-label">Active This Week</div><div class="kpi-value">6</div><div class="kpi-sub">assigned to shifts</div></div>
+      <div class="kpi-card c3"><div class="kpi-label">Shifts This Week</div><div class="kpi-value">22</div><div class="kpi-sub">across all photographers</div></div>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Search photographers…" oninput="filterTable('phot-table', this.value)"/>
+        </div>
+        <select class="filter-select" onchange="filterByStatus('phot-table', this.value)">
+          <option value="">All statuses</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="phot-table">
+          <thead>
+            <tr>
+              <th>Photographer</th>
+              <th>Phone</th>
+              <th>Shifts This Week</th>
+              <th>Status</th>
+              <th>Availability</th>
+            </tr>
+          </thead>
+          <tbody id="phot-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
-  <div id="main-content">
-    <div class="loading">Loading...</div>
+  <!-- ══ RESTAURANTS ══ -->
+  <div class="section" id="section-restaurants">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Restaurants</div>
+        <div class="page-sub">Track coverage and assigned photographers per location</div>
+      </div>
+      <button class="btn btn-primary">＋ Add Restaurant</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card c1"><div class="kpi-label">Total</div><div class="kpi-value">12</div><div class="kpi-sub">locations</div></div>
+      <div class="kpi-card c2"><div class="kpi-label">Fully Covered</div><div class="kpi-value">8</div><div class="kpi-sub">this week</div></div>
+      <div class="kpi-card c3"><div class="kpi-label">Needs Coverage</div><div class="kpi-value">4</div><div class="kpi-sub">unassigned slots</div></div>
+      <div class="kpi-card c4"><div class="kpi-label">Avg Shoots / Week</div><div class="kpi-value">2.4</div><div class="kpi-sub">per restaurant</div></div>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Search restaurants…" oninput="filterTable('rest-table', this.value)"/>
+        </div>
+        <select class="filter-select" onchange="filterByStatus('rest-table', this.value)">
+          <option value="">All coverage</option>
+          <option value="Covered">Covered</option>
+          <option value="Partial">Partial</option>
+          <option value="Uncovered">Uncovered</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="rest-table">
+          <thead>
+            <tr>
+              <th>Restaurant</th>
+              <th>Location</th>
+              <th>Assigned Photographer</th>
+              <th>Shifts / Week</th>
+              <th>Last Shoot</th>
+              <th>Coverage</th>
+            </tr>
+          </thead>
+          <tbody id="rest-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
-  <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
-  <div class="bottom-sheet" id="bottom-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title" id="sheet-title"></div>
-    <div id="sheet-body"></div>
-    <button class="sheet-delete-btn" onclick="deleteShift()">Remove shift</button>
+  <!-- ══ INVENTORY ══ -->
+  <div class="section" id="section-inventory">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Inventory</div>
+        <div class="page-sub">Camera equipment and gear assigned to photographers</div>
+      </div>
+      <button class="btn btn-primary">＋ Add Item</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card c1"><div class="kpi-label">Total Items</div><div class="kpi-value">34</div><div class="kpi-sub">in inventory</div></div>
+      <div class="kpi-card c2"><div class="kpi-label">Assigned</div><div class="kpi-value">26</div><div class="kpi-sub">to photographers</div></div>
+      <div class="kpi-card c3"><div class="kpi-label">Available</div><div class="kpi-value">6</div><div class="kpi-sub">unassigned</div></div>
+      <div class="kpi-card c4"><div class="kpi-label">Needs Service</div><div class="kpi-value">2</div><div class="kpi-sub">poor condition</div></div>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Search items…" oninput="filterTable('inv-table', this.value)"/>
+        </div>
+        <select class="filter-select" onchange="filterByStatus('inv-table', this.value)">
+          <option value="">All categories</option>
+          <option value="Camera Body">Camera Body</option>
+          <option value="Lens">Lens</option>
+          <option value="Lighting">Lighting</option>
+          <option value="Accessory">Accessory</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="inv-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Serial #</th>
+              <th>Assigned To</th>
+              <th>Last Used</th>
+              <th>Condition</th>
+            </tr>
+          </thead>
+          <tbody id="inv-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
+  <!-- ══ BILLING ══ -->
+  <div class="section" id="section-billing">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Billing</div>
+        <div class="page-sub">Invoices, payments, and revenue overview</div>
+      </div>
+      <button class="btn btn-primary">＋ New Invoice</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card c1"><div class="kpi-label">Revenue (This Month)</div><div class="kpi-value">$14,820</div><div class="kpi-sub">↑ 12% vs last month</div></div>
+      <div class="kpi-card c2"><div class="kpi-label">Paid</div><div class="kpi-value">$11,200</div><div class="kpi-sub">18 invoices</div></div>
+      <div class="kpi-card c3"><div class="kpi-label">Pending</div><div class="kpi-value">$2,340</div><div class="kpi-sub">5 invoices</div></div>
+      <div class="kpi-card c4"><div class="kpi-label">Overdue</div><div class="kpi-value">$1,280</div><div class="kpi-sub" style="color:#dc2626">3 invoices</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Monthly Revenue</div>
+        <div class="chart-wrap"><canvas id="revenueChart"></canvas></div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Revenue by Restaurant</div>
+        <div class="chart-wrap"><canvas id="revByRestChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Search invoices…" oninput="filterTable('bill-table', this.value)"/>
+        </div>
+        <select class="filter-select" onchange="filterByStatus('bill-table', this.value)">
+          <option value="">All statuses</option>
+          <option value="Paid">Paid</option>
+          <option value="Pending">Pending</option>
+          <option value="Overdue">Overdue</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="bill-table">
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Restaurant</th>
+              <th>Photographer</th>
+              <th>Date</th>
+              <th>Due Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="bill-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- DRAWER -->
+<div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  <div id="drawer-content"></div>
 </div>
 
 <script>
-// ─────────────────────────────────────────────
-// CONFIG — swap these out when wiring Glide API
-// ─────────────────────────────────────────────
-const CONFIG = {
-  useApi: false,           // set true when wiring real API
-  glideAppId: '',          // your Glide app ID
-  glideApiKey: '',         // your Glide API key
-};
+// ─── DATA ───────────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────
-// DUMMY DATA — replace with API responses later
-// ─────────────────────────────────────────────
-const DUMMY_PHOTOGRAPHERS = {
-  'p1': { id:'p1', name:'James Reynolds', initials:'JR', color:'#E6F1FB', textColor:'#0C447C', availability:[0,2,4] },
-  'p2': { id:'p2', name:'Sara Mitchell',  initials:'SM', color:'#FBEAF0', textColor:'#72243E', availability:[1,3,5] },
-  'p3': { id:'p3', name:'Ali Karimi',     initials:'AK', color:'#EAF3DE', textColor:'#27500A', availability:[0,1,3,6] },
-};
-
-const DUMMY_SHIFTS = [
-  { photographerId:'p1', dayIndex:0, weekOffset:0, restaurant:'Downtown Bistro', start:'09:00', end:'13:00' },
-  { photographerId:'p1', dayIndex:4, weekOffset:1, restaurant:'Harbor View',     start:'10:00', end:'14:00' },
+const PHOTOGRAPHERS = [
+  { id:1, name:"Alex Rivera",   initials:"AR", color:"#6c63ff", phone:"(555) 201-4455", shifts:4, util:71, status:"Active",   avail:[1,1,0,1,1,0,1], email:"alex@photoshift.co"  },
+  { id:2, name:"Jordan Kim",    initials:"JK", color:"#22c98a", phone:"(555) 342-8810", shifts:3, util:57, status:"Active",   avail:[1,0,1,1,0,1,0], email:"jordan@photoshift.co"},
+  { id:3, name:"Sam Patel",     initials:"SP", color:"#ff6584", phone:"(555) 187-0023", shifts:5, util:85, status:"Active",   avail:[1,1,1,1,1,0,0], email:"sam@photoshift.co"   },
+  { id:4, name:"Morgan Chen",   initials:"MC", color:"#f59e0b", phone:"(555) 490-7761", shifts:2, util:42, status:"Active",   avail:[0,1,1,0,1,1,0], email:"morgan@photoshift.co"},
+  { id:5, name:"Taylor Brooks", initials:"TB", color:"#56b4d3", phone:"(555) 633-2290", shifts:4, util:71, status:"Active",   avail:[1,1,0,0,1,1,1], email:"taylor@photoshift.co"},
+  { id:6, name:"Casey Torres",  initials:"CT", color:"#c77dff", phone:"(555) 755-1144", shifts:3, util:57, status:"Active",   avail:[1,0,1,1,1,0,0], email:"casey@photoshift.co" },
+  { id:7, name:"Riley Stone",   initials:"RS", color:"#f77f00", phone:"(555) 820-9934", shifts:1, util:14, status:"Inactive", avail:[0,0,0,1,0,0,0], email:"riley@photoshift.co" },
+  { id:8, name:"Drew Hall",     initials:"DH", color:"#4cc9f0", phone:"(555) 964-5523", shifts:0, util:0,  status:"Inactive", avail:[0,0,0,0,0,0,0], email:"drew@photoshift.co"  },
 ];
 
-const DUMMY_RESTAURANTS = ['Downtown Bistro','Harbor View','The Grand','Sunset Terrace'];
+const RESTAURANTS = [
+  { id:1,  name:"The Golden Fork",  location:"Downtown",   photographer:"Alex Rivera",   shifts:3, lastShoot:"Mar 22", coverage:"Covered"   },
+  { id:2,  name:"Sakura Bites",     location:"Midtown",    photographer:"Jordan Kim",    shifts:2, lastShoot:"Mar 21", coverage:"Covered"   },
+  { id:3,  name:"Tuscan Sun",       location:"Uptown",     photographer:"Sam Patel",     shifts:4, lastShoot:"Mar 23", coverage:"Covered"   },
+  { id:4,  name:"Burger Palace",    location:"East Side",  photographer:"Morgan Chen",   shifts:2, lastShoot:"Mar 20", coverage:"Partial"   },
+  { id:5,  name:"Spice Route",      location:"West End",   photographer:"Taylor Brooks", shifts:3, lastShoot:"Mar 22", coverage:"Covered"   },
+  { id:6,  name:"Ocean Catch",      location:"Harbor",     photographer:"Casey Torres",  shifts:2, lastShoot:"Mar 19", coverage:"Covered"   },
+  { id:7,  name:"Green Garden",     location:"Suburbs",    photographer:"Alex Rivera",   shifts:1, lastShoot:"Mar 18", coverage:"Partial"   },
+  { id:8,  name:"Casa Fiesta",      location:"Midtown",    photographer:"Sam Patel",     shifts:3, lastShoot:"Mar 23", coverage:"Covered"   },
+  { id:9,  name:"The Noodle Bar",   location:"Downtown",   photographer:"—",             shifts:0, lastShoot:"Mar 14", coverage:"Uncovered" },
+  { id:10, name:"Steak & Stone",    location:"Uptown",     photographer:"Jordan Kim",    shifts:2, lastShoot:"Mar 21", coverage:"Covered"   },
+  { id:11, name:"Café Lumière",     location:"Arts District", photographer:"—",          shifts:0, lastShoot:"Mar 10", coverage:"Uncovered" },
+  { id:12, name:"Harvest Table",    location:"East Side",  photographer:"Taylor Brooks", shifts:2, lastShoot:"Mar 22", coverage:"Covered"   },
+];
 
-const TIMES = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
-const DAYS  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const INVENTORY = [
+  { id:1,  name:"Sony A7 IV",          category:"Camera Body", serial:"SN-4421A", assignedTo:"Alex Rivera",   lastUsed:"Mar 23", condition:"Good" },
+  { id:2,  name:"Sony A7 IV",          category:"Camera Body", serial:"SN-4422B", assignedTo:"Sam Patel",     lastUsed:"Mar 23", condition:"Good" },
+  { id:3,  name:"Canon EOS R5",        category:"Camera Body", serial:"CN-8814C", assignedTo:"Jordan Kim",    lastUsed:"Mar 21", condition:"Good" },
+  { id:4,  name:"Canon EOS R5",        category:"Camera Body", serial:"CN-8815D", assignedTo:"Taylor Brooks", lastUsed:"Mar 22", condition:"Fair" },
+  { id:5,  name:"Nikon Z6 II",         category:"Camera Body", serial:"NK-3301E", assignedTo:"Casey Torres",  lastUsed:"Mar 19", condition:"Good" },
+  { id:6,  name:"Nikon Z6 II",         category:"Camera Body", serial:"NK-3302F", assignedTo:"Morgan Chen",   lastUsed:"Mar 20", condition:"Poor" },
+  { id:7,  name:"Sony 24-70mm f/2.8",  category:"Lens",        serial:"LN-1101G", assignedTo:"Alex Rivera",   lastUsed:"Mar 23", condition:"Good" },
+  { id:8,  name:"Sony 50mm f/1.4",     category:"Lens",        serial:"LN-1102H", assignedTo:"Sam Patel",     lastUsed:"Mar 23", condition:"Good" },
+  { id:9,  name:"Canon 85mm f/1.8",    category:"Lens",        serial:"LN-1103I", assignedTo:"Jordan Kim",    lastUsed:"Mar 21", condition:"Good" },
+  { id:10, name:"Canon 35mm f/1.4",    category:"Lens",        serial:"LN-1104J", assignedTo:"Taylor Brooks", lastUsed:"Mar 22", condition:"Good" },
+  { id:11, name:"Sigma 24mm f/1.8",    category:"Lens",        serial:"LN-1105K", assignedTo:"—",             lastUsed:"Mar 15", condition:"Fair" },
+  { id:12, name:"Tamron 70-200mm",     category:"Lens",        serial:"LN-1106L", assignedTo:"Casey Torres",  lastUsed:"Mar 19", condition:"Good" },
+  { id:13, name:"Godox AD200 Pro",     category:"Lighting",    serial:"LT-2201M", assignedTo:"Alex Rivera",   lastUsed:"Mar 23", condition:"Good" },
+  { id:14, name:"Godox AD200 Pro",     category:"Lighting",    serial:"LT-2202N", assignedTo:"Sam Patel",     lastUsed:"Mar 22", condition:"Good" },
+  { id:15, name:"Profoto B10",         category:"Lighting",    serial:"LT-2203O", assignedTo:"—",             lastUsed:"Mar 10", condition:"Good" },
+  { id:16, name:"Profoto B10",         category:"Lighting",    serial:"LT-2204P", assignedTo:"—",             lastUsed:"Mar 8",  condition:"Poor" },
+  { id:17, name:"Memory Card 256GB",   category:"Accessory",   serial:"AC-3301Q", assignedTo:"Jordan Kim",    lastUsed:"Mar 21", condition:"Good" },
+  { id:18, name:"Memory Card 256GB",   category:"Accessory",   serial:"AC-3302R", assignedTo:"Morgan Chen",   lastUsed:"Mar 20", condition:"Good" },
+  { id:19, name:"Camera Bag (Large)",  category:"Accessory",   serial:"AC-3303S", assignedTo:"Taylor Brooks", lastUsed:"Mar 22", condition:"Fair" },
+  { id:20, name:"Tripod Carbon Fiber", category:"Accessory",   serial:"AC-3304T", assignedTo:"—",             lastUsed:"Mar 17", condition:"Good" },
+];
 
-// ─────────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────────
-let state = {
-  photographer: null,
-  weekOffset: 0,
-  shifts: [...DUMMY_SHIFTS],
-  restaurants: [...DUMMY_RESTAURANTS],
-  selectedDay: null,
-};
+// day 0=Mon … 6=Sun
+const WEEKLY_SHIFTS = [
+  { day:0, dayName:"Monday",    photographer:"Alex Rivera",   restaurant:"The Golden Fork",  start:"09:00", end:"13:00" },
+  { day:0, dayName:"Monday",    photographer:"Sam Patel",     restaurant:"Tuscan Sun",        start:"10:00", end:"14:00" },
+  { day:0, dayName:"Monday",    photographer:"Taylor Brooks", restaurant:"Spice Route",       start:"11:00", end:"15:00" },
+  { day:1, dayName:"Tuesday",   photographer:"Jordan Kim",    restaurant:"Sakura Bites",      start:"09:00", end:"13:00" },
+  { day:1, dayName:"Tuesday",   photographer:"Sam Patel",     restaurant:"Casa Fiesta",       start:"10:00", end:"14:00" },
+  { day:1, dayName:"Tuesday",   photographer:"Morgan Chen",   restaurant:"Burger Palace",     start:"12:00", end:"16:00" },
+  { day:2, dayName:"Wednesday", photographer:"Casey Torres",  restaurant:"Ocean Catch",       start:"09:00", end:"13:00" },
+  { day:2, dayName:"Wednesday", photographer:"Alex Rivera",   restaurant:"Green Garden",      start:"14:00", end:"17:00" },
+  { day:3, dayName:"Thursday",  photographer:"Sam Patel",     restaurant:"Tuscan Sun",        start:"09:00", end:"13:00" },
+  { day:3, dayName:"Thursday",  photographer:"Taylor Brooks", restaurant:"Harvest Table",     start:"10:00", end:"14:00" },
+  { day:3, dayName:"Thursday",  photographer:"Jordan Kim",    restaurant:"Steak & Stone",     start:"11:00", end:"15:00" },
+  { day:4, dayName:"Friday",    photographer:"Alex Rivera",   restaurant:"The Golden Fork",   start:"09:00", end:"13:00" },
+  { day:4, dayName:"Friday",    photographer:"Casey Torres",  restaurant:"Ocean Catch",       start:"10:00", end:"14:00" },
+  { day:4, dayName:"Friday",    photographer:"Morgan Chen",   restaurant:"Burger Palace",     start:"13:00", end:"17:00" },
+  { day:5, dayName:"Saturday",  photographer:"Sam Patel",     restaurant:"Casa Fiesta",       start:"10:00", end:"15:00" },
+  { day:5, dayName:"Saturday",  photographer:"Taylor Brooks", restaurant:"Spice Route",       start:"11:00", end:"16:00" },
+  { day:6, dayName:"Sunday",    photographer:"Alex Rivera",   restaurant:"The Golden Fork",   start:"10:00", end:"14:00" },
+];
 
-// ─────────────────────────────────────────────
-// INIT — read URL params
-// ─────────────────────────────────────────────
-function init() {
-  const params = new URLSearchParams(window.location.search);
-  const photographerId = params.get('photographer_id') || 'p1'; // default for testing
-  const photographer = DUMMY_PHOTOGRAPHERS[photographerId];
-  if(!photographer) {
-    document.getElementById('main-content').innerHTML = '<div class="loading">Photographer not found.</div>';
-    return;
-  }
-  state.photographer = photographer;
-  document.getElementById('app-sub').textContent = photographer.name;
-  render();
+const INVOICES = [
+  { id:"INV-1042", restaurant:"The Golden Fork",  photographer:"Alex Rivera",   date:"Mar 20",  due:"Mar 30",  amount:820,  status:"Pending"  },
+  { id:"INV-1041", restaurant:"Sakura Bites",      photographer:"Jordan Kim",    date:"Mar 18",  due:"Mar 28",  amount:640,  status:"Paid"     },
+  { id:"INV-1040", restaurant:"Tuscan Sun",        photographer:"Sam Patel",     date:"Mar 17",  due:"Mar 27",  amount:1100, status:"Paid"     },
+  { id:"INV-1039", restaurant:"Burger Palace",     photographer:"Morgan Chen",   date:"Mar 15",  due:"Mar 25",  amount:580,  status:"Overdue"  },
+  { id:"INV-1038", restaurant:"Spice Route",       photographer:"Taylor Brooks", date:"Mar 14",  due:"Mar 24",  amount:760,  status:"Overdue"  },
+  { id:"INV-1037", restaurant:"Ocean Catch",       photographer:"Casey Torres",  date:"Mar 12",  due:"Mar 22",  amount:490,  status:"Paid"     },
+  { id:"INV-1036", restaurant:"Casa Fiesta",       photographer:"Sam Patel",     date:"Mar 10",  due:"Mar 20",  amount:940,  status:"Paid"     },
+  { id:"INV-1035", restaurant:"Steak & Stone",     photographer:"Jordan Kim",    date:"Mar 8",   due:"Mar 18",  amount:720,  status:"Paid"     },
+  { id:"INV-1034", restaurant:"Harvest Table",     photographer:"Taylor Brooks", date:"Mar 6",   due:"Mar 16",  amount:680,  status:"Overdue"  },
+  { id:"INV-1033", restaurant:"The Golden Fork",   photographer:"Alex Rivera",   date:"Mar 5",   due:"Mar 15",  amount:820,  status:"Paid"     },
+  { id:"INV-1032", restaurant:"Green Garden",      photographer:"Alex Rivera",   date:"Mar 3",   due:"Mar 13",  amount:440,  status:"Paid"     },
+  { id:"INV-1031", restaurant:"Sakura Bites",      photographer:"Jordan Kim",    date:"Mar 1",   due:"Mar 11",  amount:640,  status:"Pending"  },
+  { id:"INV-1030", restaurant:"Tuscan Sun",        photographer:"Sam Patel",     date:"Feb 27",  due:"Mar 9",   amount:1100, status:"Paid"     },
+  { id:"INV-1029", restaurant:"Spice Route",       photographer:"Taylor Brooks", date:"Feb 25",  due:"Mar 7",   amount:760,  status:"Paid"     },
+  { id:"INV-1028", restaurant:"Ocean Catch",       photographer:"Casey Torres",  date:"Feb 22",  due:"Mar 4",   amount:490,  status:"Pending"  },
+];
+
+// ─── SECTION NAV ────────────────────────────────────────────────────────────
+
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (id === 'billing') renderBillingCharts();
 }
 
-// ─────────────────────────────────────────────
-// UTILITIES
-// ─────────────────────────────────────────────
-function getMonday(offset) {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const mon = new Date(now);
-  mon.setDate(now.getDate() + diff + offset * 7);
-  mon.setHours(0,0,0,0);
-  return mon;
+// ─── RENDER TABLES ───────────────────────────────────────────────────────────
+
+function renderPhotographers() {
+  const days = ['M','T','W','T','F','S','S'];
+  document.getElementById('phot-tbody').innerHTML = PHOTOGRAPHERS.map(p => {
+    const utilColor = p.util > 70 ? '#ff6584' : p.util > 40 ? '#f59e0b' : '#22c98a';
+    const statusBadge = p.status === 'Active'
+      ? '<span class="badge badge-green">Active</span>'
+      : '<span class="badge badge-grey">Inactive</span>';
+    const availDots = p.avail.map((a, i) =>
+      `<span title="${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}" style="
+        display:inline-block;width:18px;height:18px;border-radius:4px;text-align:center;line-height:18px;
+        font-size:0.6rem;font-weight:700;margin:0 1px;
+        background:${a ? '#dcfce7' : '#f1f5f9'};color:${a ? '#16a34a' : '#94a3b8'}
+      ">${days[i]}</span>`
+    ).join('');
+    return `<tr onclick="openPhotDrawer(${p.id})">
+      <td><div class="avatar-row">
+        <div class="avatar" style="background:${p.color}22;color:${p.color}">${p.initials}</div>
+        <div><div class="avatar-name">${p.name}</div><div class="avatar-sub">${p.email}</div></div>
+      </div></td>
+      <td style="color:var(--muted)">${p.phone}</td>
+      <td><strong>${p.shifts}</strong> shifts</td>
+      <td>${statusBadge}</td>
+      <td>${availDots}</td>
+    </tr>`;
+  }).join('');
 }
 
-function isSameDay(a,b) {
-  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+function renderRestaurants() {
+  document.getElementById('rest-tbody').innerHTML = RESTAURANTS.map(r => {
+    const cvgClass = r.coverage === 'Covered' ? 'badge-green' : r.coverage === 'Partial' ? 'badge-yellow' : 'badge-red';
+    const photHtml = r.photographer === '—'
+      ? '<span style="color:var(--muted)">— Unassigned</span>'
+      : `<div class="avatar-row">
+          <div class="avatar" style="background:#ede9ff;color:#6c63ff;width:24px;height:24px;font-size:0.6rem">
+            ${r.photographer.split(' ').map(n=>n[0]).join('')}
+          </div>
+          <span>${r.photographer}</span>
+        </div>`;
+    return `<tr onclick="openRestDrawer(${r.id})">
+      <td><strong>${r.name}</strong></td>
+      <td style="color:var(--muted)">${r.location}</td>
+      <td>${photHtml}</td>
+      <td>${r.shifts > 0 ? r.shifts : '<span style="color:var(--muted)">0</span>'}</td>
+      <td style="color:var(--muted)">${r.lastShoot}</td>
+      <td><span class="badge ${cvgClass}">${r.coverage}</span></td>
+    </tr>`;
+  }).join('');
 }
 
-function getShift(dayIndex, weekOffset) {
-  return state.shifts.find(s =>
-    s.photographerId === state.photographer.id &&
-    s.dayIndex === dayIndex &&
-    s.weekOffset === weekOffset
-  );
+function renderInventory() {
+  const catIcons = { "Camera Body":"📷", "Lens":"🔭", "Lighting":"💡", "Accessory":"🎒" };
+  document.getElementById('inv-tbody').innerHTML = INVENTORY.map(item => {
+    const condClass = item.condition === 'Good' ? 'badge-green' : item.condition === 'Fair' ? 'badge-yellow' : 'badge-red';
+    const condDot = item.condition === 'Good' ? 'cond-good' : item.condition === 'Fair' ? 'cond-fair' : 'cond-poor';
+    const assigned = item.assignedTo === '—'
+      ? '<span class="badge badge-blue">Available</span>'
+      : item.assignedTo;
+    return `<tr onclick="openInvDrawer(${item.id})">
+      <td><strong>${catIcons[item.category] || ''} ${item.name}</strong></td>
+      <td><span class="badge badge-grey">${item.category}</span></td>
+      <td style="color:var(--muted);font-family:monospace;font-size:0.78rem">${item.serial}</td>
+      <td>${assigned}</td>
+      <td style="color:var(--muted)">${item.lastUsed}</td>
+      <td><span class="condition-dot ${condDot}"></span><span class="badge ${condClass}">${item.condition}</span></td>
+    </tr>`;
+  }).join('');
 }
 
-// ─────────────────────────────────────────────
-// RENDER
-// ─────────────────────────────────────────────
-function render() {
-  const p = state.photographer;
-  const monday = getMonday(state.weekOffset);
-  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
-  const today  = new Date(); today.setHours(0,0,0,0);
+function renderBilling() {
+  document.getElementById('bill-tbody').innerHTML = INVOICES.map(inv => {
+    const stClass = inv.status === 'Paid' ? 'badge-green' : inv.status === 'Pending' ? 'badge-yellow' : 'badge-red';
+    const amtClass = inv.status === 'Overdue' ? 'amount-col overdue' : 'amount-col';
+    return `<tr>
+      <td style="font-family:monospace;font-size:0.8rem;color:var(--accent)">${inv.id}</td>
+      <td><strong>${inv.restaurant}</strong></td>
+      <td style="color:var(--muted)">${inv.photographer}</td>
+      <td style="color:var(--muted)">${inv.date}</td>
+      <td style="color:var(--muted)">${inv.due}</td>
+      <td class="${amtClass}">$${inv.amount.toLocaleString()}</td>
+      <td><span class="badge ${stClass}">${inv.status}</span></td>
+    </tr>`;
+  }).join('');
+}
 
-  const totalShifts = state.shifts.filter(s => s.photographerId === p.id).length;
+// ─── BILLING CHARTS ─────────────────────────────────────────────────────────
+let revenueChart, revByRestChart;
 
-  let html = `
-    <div class="photo-card">
-      <div class="avatar" style="background:${p.color};color:${p.textColor}">${p.initials}</div>
-      <div>
-        <div class="photo-name">${p.name}</div>
-        <div class="photo-role">Photographer &nbsp;·&nbsp; ${totalShifts} shift${totalShifts!==1?'s':''} assigned</div>
-        <div class="avail-pills">${p.availability.map(d=>`<span class="pill">${DAYS[d]}</span>`).join('')}</div>
-      </div>
-    </div>
-
-    <div id="success-bar" class="success-bar"></div>
-    <div id="error-bar" class="error-bar"></div>
-
-    <div class="week-nav">
-      <span class="week-label">${monday.getDate()} ${MONTHS[monday.getMonth()]} – ${sunday.getDate()} ${MONTHS[sunday.getMonth()]} ${sunday.getFullYear()} <span id="week-badge" style="margin-left:8px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;"></span></span>
-      <div class="nav-btns">
-        <button class="nav-btn" onclick="changeWeek(-1)">&#8592;</button>
-        
-        <button class="nav-btn" onclick="changeWeek(1)">&#8594;</button>
-      </div>
-    </div>
-
-    <div class="legend">
-      <div class="leg"><div class="leg-dot" style="background:#9FE1CB;"></div>Available</div>
-      <div class="leg"><div class="leg-dot" style="background:#B5D4F4;"></div>Assigned</div>
-      <div class="leg"><div class="leg-dot" style="background:#FAEEDA;"></div>New</div>
-      <div class="leg"><div class="leg-dot" style="background:#e0e0e3;"></div>Unavailable</div>
-    </div>
-
-    <div class="cal-grid">
-  `;
-
-  for(let i=0;i<7;i++){
-    const date = new Date(monday); date.setDate(monday.getDate()+i);
-    const isToday   = isSameDay(date, today);
-    const isAvail   = p.availability.includes(i);
-    const isPast    = date < today;
-    const shift     = getShift(i, state.weekOffset);
-    const isSelected = state.selectedDay === i;
-
-    let cls = 'day-col';
-    if(isAvail && !isPast) cls += ' available';
-    else cls += ' unavailable';
-    if(isSelected) cls += ' selected';
-
-    let body = '';
-    if(shift){
-      body = `<div class="shift-badge assigned"><div class="shift-time">${shift.start}–${shift.end}</div><div class="shift-rest">${shift.restaurant}</div></div>`;
-    } else if(isAvail && !isPast){
-      body = `<div class="avail-tag">Available</div>`;
+function renderBillingCharts() {
+  // Monthly revenue
+  const months = ['Oct','Nov','Dec','Jan','Feb','Mar'];
+  const revenue = [9200, 10800, 11400, 12100, 13250, 14820];
+  const ctx1 = document.getElementById('revenueChart').getContext('2d');
+  if (revenueChart) revenueChart.destroy();
+  revenueChart = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [{
+        data: revenue,
+        backgroundColor: months.map((_, i) => i === 5 ? '#6c63ff' : '#ede9ff'),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
+        y: { grid: { color: '#e2e6f0' }, ticks: { color: '#6b7280', font: { size: 10 }, callback: v => '$' + (v/1000).toFixed(0) + 'k' } },
+      }
     }
-
-    const clickable = isAvail && !isPast && !shift;
-    const shiftData = shift ? encodeURIComponent(JSON.stringify(shift)) : null;
-    html += `
-      <div class="${cls}" ${shift ? `onclick="openSheet(JSON.parse(decodeURIComponent('${shiftData}')))" style="cursor:pointer;"` : clickable ? `onclick="selectDay(${i})"` : ''}>
-        <div class="day-head">
-          <div class="day-name">${DAYS[i]}</div>
-          <div class="day-num${isToday?' today':''}">${date.getDate()}</div>
-        </div>
-        <div class="day-body">${body}</div>
-      </div>
-    `;
-  }
-
-  html += `</div><div id="form-area"></div>`;
-  document.getElementById('main-content').innerHTML = html;
-
-  if(state.selectedDay !== null) renderForm();
-}
-
-function renderForm() {
-  const monday = getMonday(state.weekOffset);
-  const date = new Date(monday); date.setDate(monday.getDate() + state.selectedDay);
-  const dateStr = `${DAYS[state.selectedDay]}, ${date.getDate()} ${MONTHS[date.getMonth()]}`;
-
-  document.getElementById('form-area').innerHTML = `
-    <div class="form-panel">
-      <div class="form-title">Assign shift — ${dateStr}</div>
-      <div class="form-row">
-        <label class="form-label">Restaurant</label>
-        <select id="sel-restaurant">
-          <option value="">Select restaurant...</option>
-          ${state.restaurants.map(r=>`<option value="${r}">${r}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-row time-row">
-        <div>
-          <label class="form-label">Start time</label>
-          <select id="sel-start">${TIMES.map(t=>`<option>${t}</option>`).join('')}</select>
-        </div>
-        <div>
-          <label class="form-label">End time</label>
-          <select id="sel-end">${TIMES.slice(1).map(t=>`<option>${t}</option>`).join('')}</select>
-        </div>
-      </div>
-      <button class="assign-btn" onclick="assignShift()">Assign shift</button>
-      <span class="cancel-link" onclick="cancelForm()">Cancel</span>
-    </div>
-  `;
-}
-
-// ─────────────────────────────────────────────
-// ACTIONS
-// ─────────────────────────────────────────────
-function changeWeek(dir) {
-  state.weekOffset = dir === 0 ? 0 : state.weekOffset + dir;
-  state.selectedDay = null;
-  render();
-  const btn = document.getElementById("current-week-btn");
-  if(btn) btn.disabled = state.weekOffset === 0;
-  const badge = document.getElementById("week-badge");
-  if(badge) {
-    const o = state.weekOffset;
-    badge.textContent = o===0?"This week":o===1?"Next week":o===-1?"Last week":o>1?o+" weeks ahead":Math.abs(o)+" weeks ago";
-    badge.style.background = o===0?"#E1F5EE":o>0?"#E6F1FB":"#F1EFE8";
-    badge.style.color = o===0?"#0F6E56":o>0?"#185FA5":"#5F5E5A";
-  }
-}
-
-function selectDay(dayIndex) {
-  state.selectedDay = dayIndex;
-  render();
-}
-
-function cancelForm() {
-  state.selectedDay = null;
-  render();
-}
-
-function assignShift() {
-  const restaurant = document.getElementById('sel-restaurant').value;
-  const start      = document.getElementById('sel-start').value;
-  const end        = document.getElementById('sel-end').value;
-
-  if(!restaurant){ showError('Please select a restaurant.'); return; }
-  if(start >= end){ showError('End time must be after start time.'); return; }
-
-  // Add to local state (will POST to Glide API when wired)
-  state.shifts.push({
-    photographerId: state.photographer.id,
-    dayIndex: state.selectedDay,
-    weekOffset: state.weekOffset,
-    restaurant,
-    start,
-    end,
   });
 
-  const monday = getMonday(state.weekOffset);
-  const date = new Date(monday); date.setDate(monday.getDate() + state.selectedDay);
-  const dateStr = `${DAYS[state.selectedDay]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
-
-  state.selectedDay = null;
-  render();
-  showSuccess(`Shift assigned — ${restaurant} on ${dateStr}, ${start}–${end}`);
+  // Revenue by restaurant (top 6)
+  const byRest = {};
+  INVOICES.filter(i => i.status === 'Paid').forEach(i => {
+    byRest[i.restaurant] = (byRest[i.restaurant] || 0) + i.amount;
+  });
+  const sorted = Object.entries(byRest).sort((a,b) => b[1]-a[1]).slice(0,6);
+  const ctx2 = document.getElementById('revByRestChart').getContext('2d');
+  if (revByRestChart) revByRestChart.destroy();
+  revByRestChart = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: sorted.map(x => x[0].split(' ').slice(0,2).join(' ')),
+      datasets: [{
+        data: sorted.map(x => x[1]),
+        backgroundColor: ['#6c63ff','#22c98a','#ff6584','#f59e0b','#56b4d3','#c77dff'],
+        borderColor: '#ffffff',
+        borderWidth: 3,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '58%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#6b7280', font: { size: 10 }, padding: 10, usePointStyle: true, boxWidth: 8 }
+        }
+      }
+    }
+  });
 }
 
-function showSuccess(msg) {
-  const el = document.getElementById('success-bar');
-  if(!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(()=>{ el.style.display='none'; }, 4000);
+// ─── DRAWERS ─────────────────────────────────────────────────────────────────
+
+function openDrawer(html) {
+  document.getElementById('drawer-content').innerHTML = html;
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
 }
 
-function showError(msg) {
-  const el = document.getElementById('error-bar');
-  if(!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(()=>{ el.style.display='none'; }, 4000);
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
 }
 
+let _drawerPhotId = null;
 
-// ─────────────────────────────────────────────
-// BOTTOM SHEET
-// ─────────────────────────────────────────────
-let sheetShift = null;
+function openPhotDrawer(id) {
+  _drawerPhotId = id;
+  _renderPhotDrawer(id, null);
+}
 
-function openSheet(shift) {
-  sheetShift = shift;
-  const monday = getMonday(shift.weekOffset);
-  const date = new Date(monday); date.setDate(monday.getDate() + shift.dayIndex);
-  const dateStr = DAYS[shift.dayIndex] + ', ' + date.getDate() + ' ' + MONTHS[date.getMonth()] + ' ' + date.getFullYear();
+function _renderPhotDrawer(id, openFormDay) {
+  const p = PHOTOGRAPHERS.find(x => x.id === id);
+  const shortDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const availGrid = shortDays.map((d,i) => `
+    <div class="avail-day">
+      <div class="avail-day-name">${d}</div>
+      <div class="avail-dot ${p.avail[i] ? 'yes' : 'no'}">${p.avail[i] ? '✓' : '—'}</div>
+    </div>`).join('');
 
-  document.getElementById('sheet-title').textContent = shift.restaurant;
-  document.getElementById('sheet-body').innerHTML = `
-    <div class="sheet-row">
-      <span class="sheet-row-label">Date</span>
-      <span class="sheet-row-value">${dateStr}</span>
+  const assignedItems = INVENTORY.filter(item => item.assignedTo === p.name);
+  const itemsHtml = assignedItems.length
+    ? assignedItems.map(item => `<div class="drawer-row"><span>${item.name}</span><span class="badge badge-grey">${item.category}</span></div>`).join('')
+    : '<div style="color:var(--muted);font-size:0.8rem">No equipment assigned</div>';
+
+  const myShifts = WEEKLY_SHIFTS.filter(s => s.photographer === p.name);
+  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const restOptions = RESTAURANTS.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+
+  const shiftsHtml = allDays.map((dayName, dayIdx) => {
+    const shift = myShifts.find(s => s.dayName === dayName);
+    const isAvail = p.avail[dayIdx] === 1;
+
+    if (shift) {
+      // Assigned shift row with remove button
+      return `
+        <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:#f5f3ff;border-left:3px solid ${p.color};margin-bottom:6px">
+          <div style="width:58px;font-size:0.72rem;font-weight:700;color:${p.color}">${dayName.slice(0,3)}</div>
+          <div style="flex:1">
+            <div style="font-size:0.82rem;font-weight:600;color:var(--text)">🍽️ ${shift.restaurant}</div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">⏰ ${shift.start} – ${shift.end}</div>
+          </div>
+          <button onclick="removeShift('${p.name}','${dayName}')" title="Remove shift"
+            style="border:none;background:none;cursor:pointer;color:#dc2626;font-size:1rem;padding:2px 4px;border-radius:4px;line-height:1;opacity:0.7"
+            onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">✕</button>
+        </div>`;
+    }
+
+    if (!isAvail) {
+      // Not available this day
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#fafafa;margin-bottom:6px;opacity:0.4">
+          <div style="width:58px;font-size:0.72rem;font-weight:600;color:var(--muted)">${dayName.slice(0,3)}</div>
+          <div style="font-size:0.75rem;color:var(--muted);font-style:italic">Not available</div>
+        </div>`;
+    }
+
+    // Available — show assign button or inline form
+    if (openFormDay === dayName) {
+      return `
+        <div id="day-row-${dayIdx}" style="border:1.5px dashed #6c63ff;border-radius:10px;padding:12px;margin-bottom:6px;background:#faf9ff">
+          <div style="font-size:0.75rem;font-weight:700;color:#6c63ff;margin-bottom:10px">📅 Assign shift — ${dayName}</div>
+          <div style="margin-bottom:8px">
+            <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">Restaurant</label>
+            <select id="form-rest-${dayIdx}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;background:white;color:var(--text);outline:none">
+              ${restOptions}
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+            <div>
+              <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">Start time</label>
+              <input id="form-start-${dayIdx}" type="time" value="09:00"
+                style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;background:white;color:var(--text);outline:none"/>
+            </div>
+            <div>
+              <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">End time</label>
+              <input id="form-end-${dayIdx}" type="time" value="13:00"
+                style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;background:white;color:var(--text);outline:none"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="confirmAssign(${p.id},'${dayName}',${dayIdx})"
+              style="flex:1;padding:8px;background:#6c63ff;color:white;border:none;border-radius:7px;font-size:0.82rem;font-weight:600;cursor:pointer">
+              ✓ Assign Shift
+            </button>
+            <button onclick="_renderPhotDrawer(${p.id},null)"
+              style="padding:8px 14px;background:var(--card2);color:var(--muted);border:none;border-radius:7px;font-size:0.82rem;cursor:pointer">
+              Cancel
+            </button>
+          </div>
+        </div>`;
+    }
+
+    // Available — idle state with + button
+    return `
+      <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#f0fdf4;border-left:3px solid #22c98a;margin-bottom:6px">
+        <div style="width:58px;font-size:0.72rem;font-weight:700;color:#22c98a">${dayName.slice(0,3)}</div>
+        <div style="flex:1;font-size:0.78rem;color:#22c98a;font-weight:500">Available</div>
+        <button onclick="_renderPhotDrawer(${p.id},'${dayName}')"
+          style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:#22c98a;color:white;border:none;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap">
+          + Assign
+        </button>
+      </div>`;
+  }).join('');
+
+  const html = `
+    <div class="drawer-avatar-big" style="background:${p.color}22;color:${p.color}">${p.initials}</div>
+    <div class="drawer-name">${p.name}</div>
+    <div class="drawer-role">Photographer · ${p.status}</div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Contact</div>
+      <div class="drawer-row"><span>Email</span><span>${p.email}</span></div>
+      <div class="drawer-row"><span>Phone</span><span>${p.phone}</span></div>
     </div>
-    <div class="sheet-row">
-      <span class="sheet-row-label">Time</span>
-      <span class="sheet-row-value">${shift.start} – ${shift.end}</span>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Shifts This Week (${myShifts.length} assigned)</div>
+      ${shiftsHtml}
     </div>
-    <div class="sheet-row">
-      <span class="sheet-row-label">Photographer</span>
-      <span class="sheet-row-value">${state.photographer.name}</span>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Weekly Availability</div>
+      <div class="avail-grid">${availGrid}</div>
     </div>
-    <div class="sheet-row">
-      <span class="sheet-row-label">Status</span>
-      <span class="sheet-status">Scheduled</span>
-    </div>
-  `;
-  document.getElementById('sheet-overlay').classList.add('open');
-  document.getElementById('bottom-sheet').classList.add('open');
+    <div class="drawer-section">
+      <div class="drawer-section-title">Assigned Equipment</div>
+      ${itemsHtml}
+    </div>`;
+
+  if (document.getElementById('drawer').classList.contains('open')) {
+    document.getElementById('drawer-content').innerHTML = html;
+  } else {
+    openDrawer(html);
+  }
 }
 
-function closeSheet() {
-  document.getElementById('sheet-overlay').classList.remove('open');
-  document.getElementById('bottom-sheet').classList.remove('open');
-  sheetShift = null;
+function confirmAssign(photId, dayName, dayIdx) {
+  const p = PHOTOGRAPHERS.find(x => x.id === photId);
+  const restaurant = document.getElementById(`form-rest-${dayIdx}`).value;
+  const start     = document.getElementById(`form-start-${dayIdx}`).value;
+  const end       = document.getElementById(`form-end-${dayIdx}`).value;
+  if (!restaurant || !start || !end) return;
+  if (start >= end) { alert('End time must be after start time.'); return; }
+
+  const dayIndex = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].indexOf(dayName);
+  WEEKLY_SHIFTS.push({ day: dayIndex, dayName, photographer: p.name, restaurant, start, end });
+  p.shifts = WEEKLY_SHIFTS.filter(s => s.photographer === p.name).length;
+
+  renderPhotographers(); // refresh table
+  _renderPhotDrawer(photId, null);
 }
 
-function deleteShift() {
-  if(!sheetShift) return;
-  state.shifts = state.shifts.filter(s => !(
-    s.photographerId === sheetShift.photographerId &&
-    s.dayIndex === sheetShift.dayIndex &&
-    s.weekOffset === sheetShift.weekOffset
-  ));
-  closeSheet();
-  render();
-  showSuccess('Shift removed successfully.');
+function removeShift(photographerName, dayName) {
+  const idx = WEEKLY_SHIFTS.findIndex(s => s.photographer === photographerName && s.dayName === dayName);
+  if (idx !== -1) WEEKLY_SHIFTS.splice(idx, 1);
+  const p = PHOTOGRAPHERS.find(x => x.name === photographerName);
+  if (p) p.shifts = WEEKLY_SHIFTS.filter(s => s.photographer === p.name).length;
+  renderPhotographers();
+  _renderPhotDrawer(_drawerPhotId, null);
 }
 
-// ─────────────────────────────────────────────
-// START
-// ─────────────────────────────────────────────
-init();
-changeWeek(0);
+function openRestDrawer(id) {
+  const r = RESTAURANTS.find(x => x.id === id);
+  const invoicesForRest = INVOICES.filter(i => i.restaurant === r.name);
+  const totalBilled = invoicesForRest.reduce((s, i) => s + i.amount, 0);
+
+  const restShifts = WEEKLY_SHIFTS.filter(s => s.restaurant === r.name);
+  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const phColors = {'Alex Rivera':'#6c63ff','Jordan Kim':'#22c98a','Sam Patel':'#ff6584','Morgan Chen':'#f59e0b','Taylor Brooks':'#56b4d3','Casey Torres':'#c77dff','Riley Stone':'#f77f00','Drew Hall':'#4cc9f0'};
+
+  const weekHtml = allDays.map(dayName => {
+    const shift = restShifts.find(s => s.dayName === dayName);
+    if (!shift) return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--card2);margin-bottom:6px;opacity:0.5">
+        <div style="width:70px;font-size:0.72rem;font-weight:600;color:var(--muted)">${dayName.slice(0,3)}</div>
+        <div style="font-size:0.75rem;color:var(--muted);font-style:italic">No shoot</div>
+      </div>`;
+    const col = phColors[shift.photographer] || '#6c63ff';
+    const initials = shift.photographer.split(' ').map(n=>n[0]).join('');
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:#f5f3ff;border-left:3px solid ${col};margin-bottom:6px">
+        <div style="width:70px;font-size:0.72rem;font-weight:700;color:${col}">${dayName.slice(0,3)}</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:${col}22;color:${col};display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0">${initials}</div>
+        <div style="flex:1">
+          <div style="font-size:0.82rem;font-weight:600;color:var(--text)">${shift.photographer}</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">⏰ ${shift.start} – ${shift.end}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  openDrawer(`
+    <div style="font-size:2.2rem;margin-bottom:12px">🍽️</div>
+    <div class="drawer-name">${r.name}</div>
+    <div class="drawer-role">${r.location}</div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Coverage</div>
+      <div class="drawer-row"><span>Status</span><span class="badge ${r.coverage === 'Covered' ? 'badge-green' : r.coverage === 'Partial' ? 'badge-yellow' : 'badge-red'}">${r.coverage}</span></div>
+      <div class="drawer-row"><span>Last shoot</span><span>${r.lastShoot}</span></div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Shifts This Week (${restShifts.length} scheduled)</div>
+      ${restShifts.length > 0 ? weekHtml : `<div style="color:var(--muted);font-size:0.8rem;padding:8px 0">No shifts scheduled this week</div>`}
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Billing</div>
+      <div class="drawer-row"><span>Total invoices</span><strong>${invoicesForRest.length}</strong></div>
+      <div class="drawer-row"><span>Total billed</span><strong>$${totalBilled.toLocaleString()}</strong></div>
+      <div class="drawer-row"><span>Paid</span><strong>$${invoicesForRest.filter(i=>i.status==='Paid').reduce((s,i)=>s+i.amount,0).toLocaleString()}</strong></div>
+      <div class="drawer-row"><span>Outstanding</span><span style="color:#dc2626">$${invoicesForRest.filter(i=>i.status!=='Paid').reduce((s,i)=>s+i.amount,0).toLocaleString()}</span></div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Recent Invoices</div>
+      ${invoicesForRest.slice(0,4).map(i=>`
+        <div class="drawer-row">
+          <span style="font-family:monospace;font-size:0.78rem;color:var(--accent)">${i.id}</span>
+          <span>$${i.amount} · <span class="badge ${i.status==='Paid'?'badge-green':i.status==='Pending'?'badge-yellow':'badge-red'}" style="font-size:0.62rem">${i.status}</span></span>
+        </div>`).join('')}
+    </div>
+  `);
+}
+
+function openInvDrawer(id) {
+  const item = INVENTORY.find(x => x.id === id);
+  const condClass = item.condition === 'Good' ? 'badge-green' : item.condition === 'Fair' ? 'badge-yellow' : 'badge-red';
+  const catIcons = { "Camera Body":"📷", "Lens":"🔭", "Lighting":"💡", "Accessory":"🎒" };
+  openDrawer(`
+    <div style="font-size:2.2rem;margin-bottom:12px">${catIcons[item.category]}</div>
+    <div class="drawer-name">${item.name}</div>
+    <div class="drawer-role">${item.category}</div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Details</div>
+      <div class="drawer-row"><span>Serial #</span><code style="font-size:0.78rem">${item.serial}</code></div>
+      <div class="drawer-row"><span>Condition</span><span class="badge ${condClass}">${item.condition}</span></div>
+      <div class="drawer-row"><span>Last used</span><span>${item.lastUsed}</span></div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Assignment</div>
+      <div class="drawer-row"><span>Assigned to</span><strong>${item.assignedTo}</strong></div>
+      ${item.assignedTo !== '—' ? `
+        <div style="margin-top:8px">
+          <button class="btn btn-outline" style="width:100%;justify-content:center" onclick="closeDrawer()">Reassign Equipment</button>
+        </div>` : `
+        <div style="margin-top:8px">
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="closeDrawer()">Assign to Photographer</button>
+        </div>`}
+    </div>
+    ${item.condition === 'Poor' ? `<div style="background:#fee2e2;border-radius:10px;padding:12px;font-size:0.8rem;color:#dc2626;margin-top:8px">⚠️ This item is in poor condition and may need servicing before next use.</div>` : ''}
+  `);
+}
+
+// ─── SEARCH / FILTER ─────────────────────────────────────────────────────────
+
+function filterTable(tableId, query) {
+  const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+  const q = query.toLowerCase();
+  rows.forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function filterByStatus(tableId, status) {
+  const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+  rows.forEach(row => {
+    row.style.display = (!status || row.textContent.includes(status)) ? '' : 'none';
+  });
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+renderPhotographers();
+renderRestaurants();
+renderInventory();
+renderBilling();
 </script>
 </body>
 </html>
