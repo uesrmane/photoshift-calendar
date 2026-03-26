@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+a<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -115,6 +115,7 @@
   }
   .nav-btn:hover { background: var(--surface2); }
   .nav-btn.today { color: var(--blue); border-color: var(--blue-mid); }
+  .nav-btn.today:disabled { opacity: 0.4; cursor: default; }
 
   /* ── Legend ── */
   .legend {
@@ -125,11 +126,17 @@
   .leg-dot { width: 10px; height: 10px; border-radius: 3px; }
 
   /* ── Calendar grid ── */
+  .cal-scroll-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 14px;
+  }
   .cal-grid {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(58px, 1fr));
+    min-width: 420px;
     gap: 5px;
-    margin-bottom: 14px;
+    margin-bottom: 0;
   }
   .day-col {
     border: 1px solid var(--border);
@@ -415,10 +422,10 @@ function render() {
     <div id="error-bar" class="error-bar"></div>
 
     <div class="week-nav">
-      <span class="week-label">${monday.getDate()} ${MONTHS[monday.getMonth()]} – ${sunday.getDate()} ${MONTHS[sunday.getMonth()]} ${sunday.getFullYear()}</span>
+      <span class="week-label">${monday.getDate()} ${MONTHS[monday.getMonth()]} – ${sunday.getDate()} ${MONTHS[sunday.getMonth()]} ${sunday.getFullYear()} <span id="week-badge" style="margin-left:8px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;"></span></span>
       <div class="nav-btns">
         <button class="nav-btn" onclick="changeWeek(-1)">&#8592;</button>
-        <button class="nav-btn today" onclick="changeWeek(0)">This week</button>
+        
         <button class="nav-btn" onclick="changeWeek(1)">&#8594;</button>
       </div>
     </div>
@@ -509,6 +516,15 @@ function changeWeek(dir) {
   state.weekOffset = dir === 0 ? 0 : state.weekOffset + dir;
   state.selectedDay = null;
   render();
+  const btn = document.getElementById("current-week-btn");
+  if(btn) btn.disabled = state.weekOffset === 0;
+  const badge = document.getElementById("week-badge");
+  if(badge) {
+    const o = state.weekOffset;
+    badge.textContent = o===0?"This week":o===1?"Next week":o===-1?"Last week":o>1?o+" weeks ahead":Math.abs(o)+" weeks ago";
+    badge.style.background = o===0?"#E1F5EE":o>0?"#E6F1FB":"#F1EFE8";
+    badge.style.color = o===0?"#0F6E56":o>0?"#185FA5":"#5F5E5A";
+  }
 }
 
 function selectDay(dayIndex) {
@@ -568,6 +584,7 @@ function showError(msg) {
 // START
 // ─────────────────────────────────────────────
 init();
+changeWeek(0);
 </script>
 </body>
 </html>
