@@ -289,6 +289,66 @@ a<!DOCTYPE html>
     border: 1px solid #F7C1C1;
   }
 
+
+  /* ── Bottom sheet ── */
+  .sheet-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
+  }
+  .sheet-overlay.open { display: block; }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+  .bottom-sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    padding: 0 20px 32px;
+    z-index: 101;
+    transform: translateY(100%);
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .bottom-sheet.open { transform: translateY(0); }
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    margin: 12px auto 20px;
+  }
+  .sheet-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+  .sheet-row {
+    display: flex; justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 13px;
+  }
+  .sheet-row:last-of-type { border-bottom: none; }
+  .sheet-row-label { color: var(--text2); font-weight: 500; }
+  .sheet-row-value { color: var(--text); font-weight: 500; }
+  .sheet-status {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+    background: var(--blue-light); color: var(--blue-dark);
+  }
+  .sheet-delete-btn {
+    width: 100%; margin-top: 20px;
+    padding: 11px; border-radius: var(--radius-sm);
+    border: 1px solid #F7C1C1;
+    background: #FCEBEB; color: var(--red);
+    font-size: 13px; font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .sheet-delete-btn:hover { background: #F7C1C1; }
+
   /* ── Loading ── */
   .loading {
     text-align: center;
@@ -311,6 +371,14 @@ a<!DOCTYPE html>
 
   <div id="main-content">
     <div class="loading">Loading...</div>
+  </div>
+
+  <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+  <div class="bottom-sheet" id="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheet-title"></div>
+    <div id="sheet-body"></div>
+    <button class="sheet-delete-btn" onclick="deleteShift()">Remove shift</button>
   </div>
 
 </div>
@@ -578,6 +646,59 @@ function showError(msg) {
   el.textContent = msg;
   el.style.display = 'block';
   setTimeout(()=>{ el.style.display='none'; }, 4000);
+}
+
+
+// ─────────────────────────────────────────────
+// BOTTOM SHEET
+// ─────────────────────────────────────────────
+let sheetShift = null;
+
+function openSheet(shift) {
+  sheetShift = shift;
+  const monday = getMonday(shift.weekOffset);
+  const date = new Date(monday); date.setDate(monday.getDate() + shift.dayIndex);
+  const dateStr = DAYS[shift.dayIndex] + ', ' + date.getDate() + ' ' + MONTHS[date.getMonth()] + ' ' + date.getFullYear();
+
+  document.getElementById('sheet-title').textContent = shift.restaurant;
+  document.getElementById('sheet-body').innerHTML = `
+    <div class="sheet-row">
+      <span class="sheet-row-label">Date</span>
+      <span class="sheet-row-value">${dateStr}</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-row-label">Time</span>
+      <span class="sheet-row-value">${shift.start} – ${shift.end}</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-row-label">Photographer</span>
+      <span class="sheet-row-value">${state.photographer.name}</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-row-label">Status</span>
+      <span class="sheet-status">Scheduled</span>
+    </div>
+  `;
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById('bottom-sheet').classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('sheet-overlay').classList.remove('open');
+  document.getElementById('bottom-sheet').classList.remove('open');
+  sheetShift = null;
+}
+
+function deleteShift() {
+  if(!sheetShift) return;
+  state.shifts = state.shifts.filter(s => !(
+    s.photographerId === sheetShift.photographerId &&
+    s.dayIndex === sheetShift.dayIndex &&
+    s.weekOffset === sheetShift.weekOffset
+  ));
+  closeSheet();
+  render();
+  showSuccess('Shift removed successfully.');
 }
 
 // ─────────────────────────────────────────────
