@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhotoShift — Schedule</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --surface2: #f0f0f2;
+    --border: #e0e0e3;
+    --border2: #d0d0d4;
+    --text: #111111;
+    --text2: #555558;
+    --text3: #999;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --blue-mid: #B5D4F4;
+    --blue-dark: #0C447C;
+    --green: #0F6E56;
+    --green-light: #E1F5EE;
+    --green-mid: #9FE1CB;
+    --amber-light: #FAEEDA;
+    --amber-dark: #633806;
+    --red: #A32D2D;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+
+  /* ── Header ── */
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .app-logo {
+    width: 32px; height: 32px;
+    background: var(--blue);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .app-logo svg { width: 18px; height: 18px; fill: #fff; }
+  .app-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .app-sub  { font-size: 12px; color: var(--text3); margin-left: auto; }
+
+  /* ── Photographer card (top of detail) ── */
+  .photo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .photo-name { font-size: 15px; font-weight: 600; }
+  .photo-role { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .avail-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .pill {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--green-light);
+    color: var(--green);
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Week nav ── */
+  .week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .week-label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .nav-btns { display: flex; gap: 6px; }
+  .nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .nav-btn:hover { background: var(--surface2); }
+  .nav-btn.today { color: var(--blue); border-color: var(--blue-mid); }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .leg-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* ── Calendar grid ── */
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+    margin-bottom: 14px;
+  }
+  .day-col {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .day-col.available { border-color: var(--green-mid); }
+  .day-col.unavailable { opacity: 0.38; pointer-events: none; }
+  .day-col.available .day-body { cursor: pointer; }
+  .day-col.available .day-body:hover { background: #f4fdf9; }
+  .day-col.selected { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue-mid); }
+
+  .day-head {
+    padding: 6px 4px;
+    text-align: center;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .day-col.available .day-head { background: var(--green-light); border-bottom-color: var(--green-mid); }
+
+  .day-name {
+    font-size: 9px; font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .day-num {
+    font-size: 16px; font-weight: 500;
+    color: var(--text); line-height: 1.3;
+  }
+  .day-num.today { color: var(--blue); }
+
+  .day-body {
+    min-height: 72px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .shift-badge {
+    border-radius: 4px;
+    padding: 4px 5px;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .shift-badge.assigned { background: var(--blue-light); color: var(--blue-dark); }
+  .shift-badge.new      { background: var(--amber-light); color: var(--amber-dark); }
+  .shift-time { font-size: 9px; font-weight: 600; }
+  .shift-rest { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .avail-tag  { font-size: 9px; color: var(--green); font-weight: 500; text-align: center; padding: 4px 0; }
+
+  /* ── Assignment form ── */
+  .form-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 2px;
+    animation: slideIn 0.15s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .form-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+  .form-row { margin-bottom: 12px; }
+  .form-label {
+    display: block;
+    font-size: 10px; font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 5px;
+  }
+  select {
+    width: 100%;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--text);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+  }
+  select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-light); }
+
+  .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .assign-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--blue);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    margin-top: 4px;
+    letter-spacing: 0.01em;
+    transition: background 0.15s;
+  }
+  .assign-btn:hover { background: var(--blue-dark); }
+
+  .cancel-link {
+    display: block;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 10px;
+    cursor: pointer;
+  }
+  .cancel-link:hover { color: var(--text2); }
+
+  /* ── Success bar ── */
+  .success-bar {
+    background: var(--green-light);
+    color: var(--green);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    display: none;
+    border: 1px solid var(--green-mid);
+  }
+
+  /* ── Error bar ── */
+  .error-bar {
+    background: #FCEBEB;
+    color: var(--red);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    display: none;
+    border: 1px solid #F7C1C1;
+  }
+
+  /* ── Loading ── */
+  .loading {
+    text-align: center;
+    padding: 40px 0;
+    font-size: 13px;
+    color: var(--text3);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="app-header">
+    <div class="app-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2zm0 12c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/></svg>
+    </div>
+    <span class="app-name">PhotoShift</span>
+    <span class="app-sub" id="app-sub">Schedule</span>
+  </div>
+
+  <div id="main-content">
+    <div class="loading">Loading...</div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIG — swap these out when wiring Glide API
+// ─────────────────────────────────────────────
+const CONFIG = {
+  useApi: false,           // set true when wiring real API
+  glideAppId: '',          // your Glide app ID
+  glideApiKey: '',         // your Glide API key
+};
+
+// ─────────────────────────────────────────────
+// DUMMY DATA — replace with API responses later
+// ─────────────────────────────────────────────
+const DUMMY_PHOTOGRAPHERS = {
+  'p1': { id:'p1', name:'James Reynolds', initials:'JR', color:'#E6F1FB', textColor:'#0C447C', availability:[0,2,4] },
+  'p2': { id:'p2', name:'Sara Mitchell',  initials:'SM', color:'#FBEAF0', textColor:'#72243E', availability:[1,3,5] },
+  'p3': { id:'p3', name:'Ali Karimi',     initials:'AK', color:'#EAF3DE', textColor:'#27500A', availability:[0,1,3,6] },
+};
+
+const DUMMY_SHIFTS = [
+  { photographerId:'p1', dayIndex:0, weekOffset:0, restaurant:'Downtown Bistro', start:'09:00', end:'13:00' },
+  { photographerId:'p1', dayIndex:4, weekOffset:1, restaurant:'Harbor View',     start:'10:00', end:'14:00' },
+];
+
+const DUMMY_RESTAURANTS = ['Downtown Bistro','Harbor View','The Grand','Sunset Terrace'];
+
+const TIMES = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
+const DAYS  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let state = {
+  photographer: null,
+  weekOffset: 0,
+  shifts: [...DUMMY_SHIFTS],
+  restaurants: [...DUMMY_RESTAURANTS],
+  selectedDay: null,
+};
+
+// ─────────────────────────────────────────────
+// INIT — read URL params
+// ─────────────────────────────────────────────
+function init() {
+  const params = new URLSearchParams(window.location.search);
+  const photographerId = params.get('photographer_id') || 'p1'; // default for testing
+  const photographer = DUMMY_PHOTOGRAPHERS[photographerId];
+  if(!photographer) {
+    document.getElementById('main-content').innerHTML = '<div class="loading">Photographer not found.</div>';
+    return;
+  }
+  state.photographer = photographer;
+  document.getElementById('app-sub').textContent = photographer.name;
+  render();
+}
+
+// ─────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────
+function getMonday(offset) {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() + diff + offset * 7);
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+
+function isSameDay(a,b) {
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+
+function getShift(dayIndex, weekOffset) {
+  return state.shifts.find(s =>
+    s.photographerId === state.photographer.id &&
+    s.dayIndex === dayIndex &&
+    s.weekOffset === weekOffset
+  );
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+function render() {
+  const p = state.photographer;
+  const monday = getMonday(state.weekOffset);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  const today  = new Date(); today.setHours(0,0,0,0);
+
+  const totalShifts = state.shifts.filter(s => s.photographerId === p.id).length;
+
+  let html = `
+    <div class="photo-card">
+      <div class="avatar" style="background:${p.color};color:${p.textColor}">${p.initials}</div>
+      <div>
+        <div class="photo-name">${p.name}</div>
+        <div class="photo-role">Photographer &nbsp;·&nbsp; ${totalShifts} shift${totalShifts!==1?'s':''} assigned</div>
+        <div class="avail-pills">${p.availability.map(d=>`<span class="pill">${DAYS[d]}</span>`).join('')}</div>
+      </div>
+    </div>
+
+    <div id="success-bar" class="success-bar"></div>
+    <div id="error-bar" class="error-bar"></div>
+
+    <div class="week-nav">
+      <span class="week-label">${monday.getDate()} ${MONTHS[monday.getMonth()]} – ${sunday.getDate()} ${MONTHS[sunday.getMonth()]} ${sunday.getFullYear()}</span>
+      <div class="nav-btns">
+        <button class="nav-btn" onclick="changeWeek(-1)">&#8592;</button>
+        <button class="nav-btn today" onclick="changeWeek(0)">Today</button>
+        <button class="nav-btn" onclick="changeWeek(1)">&#8594;</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#9FE1CB;"></div>Available</div>
+      <div class="leg"><div class="leg-dot" style="background:#B5D4F4;"></div>Assigned</div>
+      <div class="leg"><div class="leg-dot" style="background:#FAEEDA;"></div>New</div>
+      <div class="leg"><div class="leg-dot" style="background:#e0e0e3;"></div>Unavailable</div>
+    </div>
+
+    <div class="cal-grid">
+  `;
+
+  for(let i=0;i<7;i++){
+    const date = new Date(monday); date.setDate(monday.getDate()+i);
+    const isToday   = isSameDay(date, today);
+    const isAvail   = p.availability.includes(i);
+    const isPast    = date < today;
+    const shift     = getShift(i, state.weekOffset);
+    const isSelected = state.selectedDay === i;
+
+    let cls = 'day-col';
+    if(isAvail && !isPast) cls += ' available';
+    else cls += ' unavailable';
+    if(isSelected) cls += ' selected';
+
+    let body = '';
+    if(shift){
+      body = `<div class="shift-badge assigned"><div class="shift-time">${shift.start}–${shift.end}</div><div class="shift-rest">${shift.restaurant}</div></div>`;
+    } else if(isAvail && !isPast){
+      body = `<div class="avail-tag">Available</div>`;
+    }
+
+    const clickable = isAvail && !isPast && !shift;
+    html += `
+      <div class="${cls}" ${clickable ? `onclick="selectDay(${i})"` : ''}>
+        <div class="day-head">
+          <div class="day-name">${DAYS[i]}</div>
+          <div class="day-num${isToday?' today':''}">${date.getDate()}</div>
+        </div>
+        <div class="day-body">${body}</div>
+      </div>
+    `;
+  }
+
+  html += `</div><div id="form-area"></div>`;
+  document.getElementById('main-content').innerHTML = html;
+
+  if(state.selectedDay !== null) renderForm();
+}
+
+function renderForm() {
+  const monday = getMonday(state.weekOffset);
+  const date = new Date(monday); date.setDate(monday.getDate() + state.selectedDay);
+  const dateStr = `${DAYS[state.selectedDay]}, ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+
+  document.getElementById('form-area').innerHTML = `
+    <div class="form-panel">
+      <div class="form-title">Assign shift — ${dateStr}</div>
+      <div class="form-row">
+        <label class="form-label">Restaurant</label>
+        <select id="sel-restaurant">
+          <option value="">Select restaurant...</option>
+          ${state.restaurants.map(r=>`<option value="${r}">${r}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row time-row">
+        <div>
+          <label class="form-label">Start time</label>
+          <select id="sel-start">${TIMES.map(t=>`<option>${t}</option>`).join('')}</select>
+        </div>
+        <div>
+          <label class="form-label">End time</label>
+          <select id="sel-end">${TIMES.slice(1).map(t=>`<option>${t}</option>`).join('')}</select>
+        </div>
+      </div>
+      <button class="assign-btn" onclick="assignShift()">Assign shift</button>
+      <span class="cancel-link" onclick="cancelForm()">Cancel</span>
+    </div>
+  `;
+}
+
+// ─────────────────────────────────────────────
+// ACTIONS
+// ─────────────────────────────────────────────
+function changeWeek(dir) {
+  state.weekOffset = dir === 0 ? 0 : state.weekOffset + dir;
+  state.selectedDay = null;
+  render();
+}
+
+function selectDay(dayIndex) {
+  state.selectedDay = dayIndex;
+  render();
+}
+
+function cancelForm() {
+  state.selectedDay = null;
+  render();
+}
+
+function assignShift() {
+  const restaurant = document.getElementById('sel-restaurant').value;
+  const start      = document.getElementById('sel-start').value;
+  const end        = document.getElementById('sel-end').value;
+
+  if(!restaurant){ showError('Please select a restaurant.'); return; }
+  if(start >= end){ showError('End time must be after start time.'); return; }
+
+  // Add to local state (will POST to Glide API when wired)
+  state.shifts.push({
+    photographerId: state.photographer.id,
+    dayIndex: state.selectedDay,
+    weekOffset: state.weekOffset,
+    restaurant,
+    start,
+    end,
+  });
+
+  const monday = getMonday(state.weekOffset);
+  const date = new Date(monday); date.setDate(monday.getDate() + state.selectedDay);
+  const dateStr = `${DAYS[state.selectedDay]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+
+  state.selectedDay = null;
+  render();
+  showSuccess(`Shift assigned — ${restaurant} on ${dateStr}, ${start}–${end}`);
+}
+
+function showSuccess(msg) {
+  const el = document.getElementById('success-bar');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(()=>{ el.style.display='none'; }, 4000);
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-bar');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(()=>{ el.style.display='none'; }, 4000);
+}
+
+// ─────────────────────────────────────────────
+// START
+// ─────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
