@@ -21,6 +21,7 @@
       --text: #1e2235;
       --muted: #6b7280;
       --border: #e2e6f0;
+      --bottom-nav-h: 64px;
     }
 
     body {
@@ -42,7 +43,7 @@
       padding: 24px 0;
       position: fixed;
       top: 0; left: 0; bottom: 0;
-      z-index: 10;
+      z-index: 20;
     }
 
     .brand {
@@ -104,6 +105,61 @@
     }
     .manager-name { font-size: 0.8rem; font-weight: 600; color: var(--text); }
 
+    /* ── BOTTOM NAV (mobile only) ── */
+    .bottom-nav {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: var(--bottom-nav-h);
+      background: white;
+      border-top: 1px solid var(--border);
+      z-index: 20;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 4px;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bottom-nav-item {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; flex: 1;
+      border: none; background: none; cursor: pointer;
+      color: var(--muted); font-size: 0.62rem; font-weight: 500;
+      padding: 8px 4px; border-radius: 10px;
+      transition: color 0.15s; position: relative;
+    }
+    .bottom-nav-item .bn-icon { font-size: 1.25rem; line-height: 1; }
+    .bottom-nav-item.active { color: var(--accent); }
+    .bottom-nav-item.active .bn-icon-bg {
+      position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+      width: 40px; height: 28px; background: var(--accent-light);
+      border-radius: 14px; z-index: -1;
+    }
+    .bn-badge {
+      position: absolute; top: 5px; right: calc(50% - 20px);
+      background: var(--accent2); color: white;
+      font-size: 0.55rem; font-weight: 700;
+      width: 14px; height: 14px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── MOBILE TOP BAR ── */
+    .mobile-topbar {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 56px;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      z-index: 20;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+    }
+    .mobile-topbar .brand-icon { width: 30px; height: 30px; font-size: 15px; }
+    .mobile-topbar .brand-text { font-size: 0.95rem; }
+    .mobile-topbar .brand-sub { display: none; }
+    .mobile-page-title {
+      flex: 1; font-size: 1rem; font-weight: 700; margin-left: 4px;
+    }
+
     /* ── MAIN ── */
     .main {
       margin-left: 220px;
@@ -141,9 +197,9 @@
     /* ── KPI ROW ── */
     .kpi-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 14px;
-      margin-bottom: 22px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
     }
     .kpi-card {
       background: var(--card);
@@ -190,7 +246,7 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 7px 12px;
-      flex: 1; min-width: 180px; max-width: 280px;
+      flex: 1; min-width: 140px; max-width: 280px;
     }
     .search-box input {
       border: none; background: none; color: var(--text);
@@ -246,14 +302,14 @@
     /* ── DETAIL DRAWER ── */
     .drawer-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.25); z-index: 100;
+      background: rgba(0,0,0,0.3); z-index: 100;
     }
     .drawer-overlay.open { display: block; }
     .drawer {
       position: fixed; top: 0; right: -420px; bottom: 0;
       width: 420px; max-width: 100vw;
       background: white; border-left: 1px solid var(--border);
-      z-index: 101; transition: right 0.25s ease;
+      z-index: 101; transition: right 0.28s cubic-bezier(.4,0,.2,1);
       overflow-y: auto; padding: 28px;
     }
     .drawer.open { right: 0; }
@@ -293,7 +349,6 @@
 
     /* ── GRID 2 ── */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
-    @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } .sidebar { width: 60px; } .main { margin-left: 60px; } .brand-text, .brand-sub, .nav-item span:not(.nav-icon) { display: none; } }
 
     .chart-wrap { position: relative; height: 230px; }
 
@@ -313,9 +368,109 @@
       color: var(--muted); font-size: 0.85rem;
     }
     .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+    /* ══════════════════════════════
+       TABLET  (≤ 900px)
+    ══════════════════════════════ */
+    @media (max-width: 900px) {
+      .sidebar { width: 68px; padding: 16px 0; }
+      .brand { padding: 0 0 16px; justify-content: center; }
+      .brand-text, .brand-sub { display: none; }
+      .nav { padding: 16px 8px; }
+      .nav-item { justify-content: center; padding: 10px; }
+      .nav-item span:not(.nav-icon) { display: none; }
+      .nav-badge { position: absolute; top: 4px; right: 4px; padding: 1px 4px; }
+      .nav-item { position: relative; }
+      .sidebar-footer { padding: 12px 0 0; display: flex; justify-content: center; }
+      .manager-name, .sidebar-footer > div > div:last-child { display: none; }
+      .main { margin-left: 68px; padding: 20px; }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* ══════════════════════════════
+       MOBILE  (≤ 640px)
+    ══════════════════════════════ */
+    @media (max-width: 640px) {
+      /* hide sidebar, show bottom nav + top bar */
+      .sidebar { display: none; }
+      .bottom-nav { display: flex; }
+      .mobile-topbar { display: flex; }
+
+      body { padding-top: 56px; padding-bottom: var(--bottom-nav-h); }
+
+      .main {
+        margin-left: 0;
+        padding: 16px;
+        padding-bottom: calc(var(--bottom-nav-h) + 16px);
+      }
+
+      /* page header stacks */
+      .page-header { margin-bottom: 16px; }
+      .page-title { font-size: 1.15rem; }
+      .page-sub { font-size: 0.75rem; }
+      .page-header .btn { width: 100%; justify-content: center; }
+
+      /* KPI: 2 columns */
+      .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+      .kpi-value { font-size: 1.5rem; }
+      .kpi-label { font-size: 0.65rem; }
+
+      /* cards */
+      .card { padding: 14px; border-radius: 12px; margin-bottom: 14px; }
+
+      /* toolbar wraps nicely */
+      .toolbar { gap: 8px; }
+      .search-box { max-width: 100%; }
+      .filter-select { width: 100%; }
+
+      /* charts shorter on mobile */
+      .chart-wrap { height: 180px; }
+
+      /* grid 2 stacks */
+      .grid-2 { grid-template-columns: 1fr; gap: 12px; }
+
+      /* drawer becomes bottom sheet */
+      .drawer {
+        top: auto;
+        right: 0 !important;
+        left: 0;
+        bottom: -100%;
+        width: 100%;
+        max-height: 88vh;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        border-radius: 20px 20px 0 0;
+        transition: bottom 0.28s cubic-bezier(.4,0,.2,1);
+        padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+      }
+      .drawer::before {
+        content: '';
+        display: block;
+        width: 36px; height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        margin: 0 auto 16px;
+      }
+      .drawer.open { bottom: 0; right: 0 !important; }
+      .drawer-close { top: 16px; right: 16px; }
+
+      /* hide less-essential table columns on mobile */
+      .data-table .hide-mobile { display: none; }
+
+      /* avatar sub text hidden */
+      .avatar-sub { display: none; }
+    }
   </style>
 </head>
 <body>
+
+<!-- MOBILE TOP BAR -->
+<div class="mobile-topbar">
+  <div class="brand-icon">📸</div>
+  <div class="brand-text">PhotoShift</div>
+  <div class="mobile-page-title" id="mobile-page-title">Photographers</div>
+  <div class="manager-avatar" style="width:30px;height:30px;font-size:0.65rem;margin-left:auto">MG</div>
+</div>
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
@@ -390,10 +545,10 @@
           <thead>
             <tr>
               <th>Photographer</th>
-              <th>Phone</th>
-              <th>Shifts This Week</th>
+              <th class="hide-mobile">Phone</th>
+              <th>Shifts</th>
               <th>Status</th>
-              <th>Availability</th>
+              <th class="hide-mobile">Availability</th>
             </tr>
           </thead>
           <tbody id="phot-tbody"></tbody>
@@ -435,10 +590,10 @@
           <thead>
             <tr>
               <th>Restaurant</th>
-              <th>Location</th>
-              <th>Assigned Photographer</th>
-              <th>Shifts / Week</th>
-              <th>Last Shoot</th>
+              <th class="hide-mobile">Location</th>
+              <th>Photographer</th>
+              <th class="hide-mobile">Shifts / Week</th>
+              <th class="hide-mobile">Last Shoot</th>
               <th>Coverage</th>
             </tr>
           </thead>
@@ -482,10 +637,10 @@
           <thead>
             <tr>
               <th>Item</th>
-              <th>Category</th>
-              <th>Serial #</th>
+              <th class="hide-mobile">Category</th>
+              <th class="hide-mobile">Serial #</th>
               <th>Assigned To</th>
-              <th>Last Used</th>
+              <th class="hide-mobile">Last Used</th>
               <th>Condition</th>
             </tr>
           </thead>
@@ -537,11 +692,11 @@
         <table class="data-table" id="bill-table">
           <thead>
             <tr>
-              <th>Invoice #</th>
+              <th class="hide-mobile">Invoice #</th>
               <th>Restaurant</th>
-              <th>Photographer</th>
-              <th>Date</th>
-              <th>Due Date</th>
+              <th class="hide-mobile">Photographer</th>
+              <th class="hide-mobile">Date</th>
+              <th class="hide-mobile">Due Date</th>
               <th>Amount</th>
               <th>Status</th>
             </tr>
@@ -553,6 +708,31 @@
   </div>
 
 </main>
+
+<!-- BOTTOM NAV (mobile) -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bottom-nav-item active" onclick="showSection('photographers', this)" id="bn-photographers">
+    <div class="bn-icon-bg"></div>
+    <span class="bn-icon">👥</span>
+    <span>Team</span>
+  </button>
+  <button class="bottom-nav-item" onclick="showSection('restaurants', this)" id="bn-restaurants">
+    <div class="bn-icon-bg"></div>
+    <span class="bn-icon">🍽️</span>
+    <span>Places</span>
+  </button>
+  <button class="bottom-nav-item" onclick="showSection('inventory', this)" id="bn-inventory">
+    <div class="bn-icon-bg"></div>
+    <span class="bn-icon">🎒</span>
+    <span>Gear</span>
+  </button>
+  <button class="bottom-nav-item" onclick="showSection('billing', this)" id="bn-billing">
+    <div class="bn-icon-bg"></div>
+    <span class="bn-icon">💳</span>
+    <span>Billing</span>
+    <span class="bn-badge">3</span>
+  </button>
+</nav>
 
 <!-- DRAWER -->
 <div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
@@ -654,12 +834,24 @@ const INVOICES = [
 
 // ─── SECTION NAV ────────────────────────────────────────────────────────────
 
+const SECTION_TITLES = { photographers:'Photographers', restaurants:'Restaurants', inventory:'Inventory', billing:'Billing' };
+
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('section-' + id).classList.add('active');
   event.currentTarget.classList.add('active');
+  // sync the matching sidebar nav item too
+  const sidebarMatch = [...document.querySelectorAll('.nav-item')].find(el => el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${id}'`));
+  if (sidebarMatch) sidebarMatch.classList.add('active');
+  const bnMatch = document.getElementById('bn-' + id);
+  if (bnMatch) bnMatch.classList.add('active');
+  const titleEl = document.getElementById('mobile-page-title');
+  if (titleEl) titleEl.textContent = SECTION_TITLES[id] || id;
   if (id === 'billing') renderBillingCharts();
+  // scroll to top on mobile
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ─── RENDER TABLES ───────────────────────────────────────────────────────────
@@ -683,10 +875,10 @@ function renderPhotographers() {
         <div class="avatar" style="background:${p.color}22;color:${p.color}">${p.initials}</div>
         <div><div class="avatar-name">${p.name}</div><div class="avatar-sub">${p.email}</div></div>
       </div></td>
-      <td style="color:var(--muted)">${p.phone}</td>
-      <td><strong>${p.shifts}</strong> shifts</td>
+      <td class="hide-mobile" style="color:var(--muted)">${p.phone}</td>
+      <td><strong>${p.shifts}</strong></td>
       <td>${statusBadge}</td>
-      <td>${availDots}</td>
+      <td class="hide-mobile">${availDots}</td>
     </tr>`;
   }).join('');
 }
@@ -704,10 +896,10 @@ function renderRestaurants() {
         </div>`;
     return `<tr onclick="openRestDrawer(${r.id})">
       <td><strong>${r.name}</strong></td>
-      <td style="color:var(--muted)">${r.location}</td>
+      <td class="hide-mobile" style="color:var(--muted)">${r.location}</td>
       <td>${photHtml}</td>
-      <td>${r.shifts > 0 ? r.shifts : '<span style="color:var(--muted)">0</span>'}</td>
-      <td style="color:var(--muted)">${r.lastShoot}</td>
+      <td class="hide-mobile">${r.shifts > 0 ? r.shifts : '<span style="color:var(--muted)">0</span>'}</td>
+      <td class="hide-mobile" style="color:var(--muted)">${r.lastShoot}</td>
       <td><span class="badge ${cvgClass}">${r.coverage}</span></td>
     </tr>`;
   }).join('');
@@ -723,10 +915,10 @@ function renderInventory() {
       : item.assignedTo;
     return `<tr onclick="openInvDrawer(${item.id})">
       <td><strong>${catIcons[item.category] || ''} ${item.name}</strong></td>
-      <td><span class="badge badge-grey">${item.category}</span></td>
-      <td style="color:var(--muted);font-family:monospace;font-size:0.78rem">${item.serial}</td>
+      <td class="hide-mobile"><span class="badge badge-grey">${item.category}</span></td>
+      <td class="hide-mobile" style="color:var(--muted);font-family:monospace;font-size:0.78rem">${item.serial}</td>
       <td>${assigned}</td>
-      <td style="color:var(--muted)">${item.lastUsed}</td>
+      <td class="hide-mobile" style="color:var(--muted)">${item.lastUsed}</td>
       <td><span class="condition-dot ${condDot}"></span><span class="badge ${condClass}">${item.condition}</span></td>
     </tr>`;
   }).join('');
@@ -737,11 +929,11 @@ function renderBilling() {
     const stClass = inv.status === 'Paid' ? 'badge-green' : inv.status === 'Pending' ? 'badge-yellow' : 'badge-red';
     const amtClass = inv.status === 'Overdue' ? 'amount-col overdue' : 'amount-col';
     return `<tr>
-      <td style="font-family:monospace;font-size:0.8rem;color:var(--accent)">${inv.id}</td>
+      <td class="hide-mobile" style="font-family:monospace;font-size:0.8rem;color:var(--accent)">${inv.id}</td>
       <td><strong>${inv.restaurant}</strong></td>
-      <td style="color:var(--muted)">${inv.photographer}</td>
-      <td style="color:var(--muted)">${inv.date}</td>
-      <td style="color:var(--muted)">${inv.due}</td>
+      <td class="hide-mobile" style="color:var(--muted)">${inv.photographer}</td>
+      <td class="hide-mobile" style="color:var(--muted)">${inv.date}</td>
+      <td class="hide-mobile" style="color:var(--muted)">${inv.due}</td>
       <td class="${amtClass}">$${inv.amount.toLocaleString()}</td>
       <td><span class="badge ${stClass}">${inv.status}</span></td>
     </tr>`;
