@@ -120,6 +120,23 @@
     }
     .role-select:focus { border-color: var(--accent); }
 
+    /* ── WEEK SELECTOR ── */
+    .week-selector {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px 16px; margin-bottom: 20px; gap: 12px;
+    }
+    .week-nav-btn {
+      width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+      border: 1px solid var(--border); background: var(--card2);
+      cursor: pointer; font-size: 1rem; color: var(--text);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .week-nav-btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .week-label-text { font-size: 0.88rem; font-weight: 600; color: var(--text); text-align: center; }
+    .week-sub-text { font-size: 0.72rem; color: var(--accent); font-weight: 600; text-align: center; margin-top: 2px; }
+
     /* ── PHOTOGRAPHER PORTAL ── */
     .portal-hero {
       display: flex; align-items: center; gap: 16px;
@@ -252,7 +269,17 @@
       border-radius: 14px;
       padding: 16px 18px;
       position: relative; overflow: hidden;
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.12s, border-color 0.15s;
+      user-select: none;
     }
+    .kpi-card:hover { box-shadow: 0 6px 22px rgba(0,0,0,0.09); transform: translateY(-2px); }
+    .kpi-card:active { transform: translateY(0); }
+    .kpi-card.kpi-active { border-color: transparent; }
+    .kpi-card.c1.kpi-active { box-shadow: 0 0 0 2.5px var(--accent),   0 4px 16px rgba(108,99,255,0.15); }
+    .kpi-card.c2.kpi-active { box-shadow: 0 0 0 2.5px var(--accent3),  0 4px 16px rgba(34,201,138,0.15); }
+    .kpi-card.c3.kpi-active { box-shadow: 0 0 0 2.5px var(--accent2),  0 4px 16px rgba(255,101,132,0.15); }
+    .kpi-card.c4.kpi-active { box-shadow: 0 0 0 2.5px var(--accent4),  0 4px 16px rgba(245,158,11,0.15); }
     .kpi-card::before {
       content: ''; position: absolute;
       top: 0; left: 0; right: 0; height: 3px;
@@ -562,6 +589,9 @@
         <option value="manager">👔 Manager</option>
       </select>
     </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <button onclick="dbReset()" style="width:100%;padding:7px 10px;background:none;border:1px solid var(--border);border-radius:8px;font-size:0.72rem;color:var(--muted);cursor:pointer;text-align:left;" title="Wipe localStorage and reload with fresh demo data">🔄 Reset Demo Data</button>
+    </div>
   </div>
 </aside>
 
@@ -577,11 +607,19 @@
       </div>
       <button class="btn btn-primary" onclick="openAddPhotModal()">＋ Add Photographer</button>
     </div>
+    <div class="week-selector">
+      <button class="week-nav-btn" onclick="changeWeek(-1)">‹</button>
+      <div>
+        <div class="week-label-text" id="week-label-photographers">—</div>
+        <div class="week-sub-text" id="week-sub-photographers"></div>
+      </div>
+      <button class="week-nav-btn" onclick="changeWeek(1)">›</button>
+    </div>
     <div class="kpi-row">
-      <div class="kpi-card c1"><div class="kpi-label">Total</div><div class="kpi-value">8</div><div class="kpi-sub">on the team</div></div>
-      <div class="kpi-card c2"><div class="kpi-label">Active This Week</div><div class="kpi-value">6</div><div class="kpi-sub">assigned to shifts</div></div>
-      <div class="kpi-card c3"><div class="kpi-label">Shifts This Week</div><div class="kpi-value">22</div><div class="kpi-sub">across all photographers</div></div>
-      <div class="kpi-card c4"><div class="kpi-label">Open Slots</div><div class="kpi-value" id="kpi-open-slots">—</div><div class="kpi-sub">need filling this week</div></div>
+      <div class="kpi-card c1" id="kpi-ph-card-all"    onclick="kpiPhotClick('all',    this)" title="Show all photographers"><div class="kpi-label">Total</div><div class="kpi-value" id="kpi-phot-total">—</div><div class="kpi-sub">on the team</div></div>
+      <div class="kpi-card c2" id="kpi-ph-card-active" onclick="kpiPhotClick('active', this)" title="Filter: assigned this week"><div class="kpi-label">Active</div><div class="kpi-value" id="kpi-phot-active">—</div><div class="kpi-sub">assigned this week</div></div>
+      <div class="kpi-card c3" id="kpi-ph-card-shifts" onclick="kpiPhotClick('shifts', this)" title="See full shift schedule"><div class="kpi-label">Shifts</div><div class="kpi-value" id="kpi-phot-shifts">—</div><div class="kpi-sub">tap to view schedule</div></div>
+      <div class="kpi-card c4" id="kpi-ph-card-open"   onclick="kpiPhotClick('open',   this)" title="See all unassigned slots"><div class="kpi-label">Open Slots</div><div class="kpi-value" id="kpi-open-slots">—</div><div class="kpi-sub">tap to view all</div></div>
     </div>
     <div class="card">
       <div class="toolbar">
@@ -597,7 +635,7 @@
               <th>Photographer</th>
               <th class="hide-mobile">Phone</th>
               <th>Shifts</th>
-              <th>Sales (Last Week)</th>
+              <th>Sales</th>
               <th class="hide-mobile">Availability</th>
             </tr>
           </thead>
@@ -616,14 +654,22 @@
       </div>
       <button class="btn btn-primary" onclick="openAddRestModal()">＋ Add Restaurant</button>
     </div>
+    <div class="week-selector">
+      <button class="week-nav-btn" onclick="changeWeek(-1)">‹</button>
+      <div>
+        <div class="week-label-text" id="week-label-restaurants">—</div>
+        <div class="week-sub-text" id="week-sub-restaurants"></div>
+      </div>
+      <button class="week-nav-btn" onclick="changeWeek(1)">›</button>
+    </div>
     <div class="kpi-row">
-      <div class="kpi-card c1"><div class="kpi-label">Total</div><div class="kpi-value">12</div><div class="kpi-sub">locations</div></div>
-      <div class="kpi-card c2"><div class="kpi-label">Fully Covered</div><div class="kpi-value">8</div><div class="kpi-sub">this week</div></div>
-      <div class="kpi-card c3"><div class="kpi-label">Needs Coverage</div><div class="kpi-value">4</div><div class="kpi-sub">unassigned slots</div></div>
-      <div class="kpi-card c4">
+      <div class="kpi-card c1" id="kpi-re-card-all"      onclick="kpiRestClick('all',      this)" title="Show all restaurants"><div class="kpi-label">Total</div><div class="kpi-value" id="kpi-rest-total">—</div><div class="kpi-sub">locations</div></div>
+      <div class="kpi-card c2" id="kpi-re-card-covered"  onclick="kpiRestClick('covered',  this)" title="Filter: fully covered"><div class="kpi-label">Fully Covered</div><div class="kpi-value" id="kpi-rest-covered">—</div><div class="kpi-sub">this week</div></div>
+      <div class="kpi-card c3" id="kpi-re-card-uncovered" onclick="kpiRestClick('uncovered', this)" title="Filter: needs coverage"><div class="kpi-label">Needs Coverage</div><div class="kpi-value" id="kpi-rest-needs">—</div><div class="kpi-sub">tap to see which</div></div>
+      <div class="kpi-card c4" id="kpi-re-card-top"      onclick="kpiRestClick('top',      this)" title="Open top restaurant">
         <div class="kpi-label">Top Sales</div>
         <div class="kpi-value" id="kpi-top-rest-sales" style="font-size:1.35rem">—</div>
-        <div class="kpi-sub" id="kpi-top-rest-name">this week</div>
+        <div class="kpi-sub" id="kpi-top-rest-name">tap to open</div>
       </div>
     </div>
     <div class="card">
@@ -820,6 +866,206 @@ const RESTAURANT_SUPPLIES = {
   ],
 };
 
+// ─── WEEK NAVIGATION ─────────────────────────────────────────────────────────
+
+let _weekOffset = 0;          // 0 = current week, -1 = last week, +1 = next week
+const SHIFTS_BY_WEEK = {};    // cache of shifts per week offset
+
+function getWeekDates(offset) {
+  const now = new Date();
+  const dow = now.getDay(); // 0=Sun … 6=Sat
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
+  monday.setHours(0, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+function getWeekLabel(offset) {
+  const dates = getWeekDates(offset);
+  const mon = dates[0], sun = dates[6];
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${fmt(mon)} – ${fmt(sun)}, ${sun.getFullYear()}`;
+}
+
+function getWeekSub(offset) {
+  if (offset === 0)  return 'This Week';
+  if (offset === -1) return 'Last Week';
+  if (offset === 1)  return 'Next Week';
+  return offset > 0 ? `${offset} weeks ahead` : `${Math.abs(offset)} weeks ago`;
+}
+
+function formatDayDate(dayIdx) {
+  // Returns e.g. "Mar 24" for the given day index in the current week
+  const d = getWeekDates(_weekOffset)[dayIdx];
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function updateWeekSelectors() {
+  const label = getWeekLabel(_weekOffset);
+  const sub   = getWeekSub(_weekOffset);
+  ['photographers', 'restaurants', 'my-portal'].forEach(id => {
+    const lEl = document.getElementById(`week-label-${id}`);
+    const sEl = document.getElementById(`week-sub-${id}`);
+    if (lEl) lEl.textContent = label;
+    if (sEl) sEl.textContent = sub;
+  });
+}
+
+function changeWeek(delta) {
+  // Clear any active KPI filters
+  _photKpiFilter = null;
+  _restKpiFilter = null;
+  document.querySelectorAll('.kpi-card.kpi-active').forEach(c => c.classList.remove('kpi-active'));
+  // Save current week's shifts under ISO key
+  const oldKey = dbGetWeekKey(_weekOffset);
+  SHIFTS_BY_WEEK[oldKey] = WEEKLY_SHIFTS.map(s => ({ ...s }));
+  _weekOffset += delta;
+  // Restore or start fresh from ISO key
+  const newKey = dbGetWeekKey(_weekOffset);
+  WEEKLY_SHIFTS.length = 0;
+  (SHIFTS_BY_WEEK[newKey] || []).forEach(s => WEEKLY_SHIFTS.push(s));
+  // Load sales for the new week
+  loadWeekSales(newKey);
+  // Persist
+  dbSave();
+  // Refresh UI
+  updateWeekSelectors();
+  renderPhotographers();
+  renderRestaurants();
+  if (_currentRole !== 'manager') renderMyPortal(_currentRole);
+  closeDrawer();
+}
+
+// ─── DATABASE / PERSISTENCE ──────────────────────────────────────────────────
+
+const DB_PREFIX = 'photoshift_v1';
+let SALES_DB = {}; // ISO week key -> { photographerName -> sales amount }
+
+function dbGetWeekKey(offset) {
+  return getWeekDates(offset)[0].toISOString().slice(0, 10);
+}
+
+function loadWeekSales(weekKey) {
+  const sales = SALES_DB[weekKey];
+  PHOTOGRAPHERS.forEach(p => {
+    p.sales = (sales && sales[p.name] !== undefined) ? sales[p.name] : 0;
+  });
+}
+
+function dbSave() {
+  // Sync current week into SHIFTS_BY_WEEK
+  const currentKey = dbGetWeekKey(_weekOffset);
+  SHIFTS_BY_WEEK[currentKey] = WEEKLY_SHIFTS.map(s => ({ ...s }));
+  try {
+    localStorage.setItem(DB_PREFIX + '_shifts',   JSON.stringify(SHIFTS_BY_WEEK));
+    localStorage.setItem(DB_PREFIX + '_sales',    JSON.stringify(SALES_DB));
+    localStorage.setItem(DB_PREFIX + '_supplies', JSON.stringify(RESTAURANT_SUPPLIES));
+    localStorage.setItem(DB_PREFIX + '_avail',    JSON.stringify(
+      PHOTOGRAPHERS.map(p => ({ id: p.id, avail: [...p.avail] }))
+    ));
+  } catch(e) { console.warn('PhotoShift: localStorage save failed', e); }
+}
+
+function dbLoad() {
+  try {
+    const raw = {
+      shifts:   localStorage.getItem(DB_PREFIX + '_shifts'),
+      sales:    localStorage.getItem(DB_PREFIX + '_sales'),
+      supplies: localStorage.getItem(DB_PREFIX + '_supplies'),
+      avail:    localStorage.getItem(DB_PREFIX + '_avail'),
+    };
+    if (raw.shifts) {
+      Object.assign(SHIFTS_BY_WEEK, JSON.parse(raw.shifts));
+      const key = dbGetWeekKey(0);
+      WEEKLY_SHIFTS.length = 0;
+      (SHIFTS_BY_WEEK[key] || []).forEach(s => WEEKLY_SHIFTS.push(s));
+    }
+    if (raw.sales) {
+      SALES_DB = JSON.parse(raw.sales);
+      loadWeekSales(dbGetWeekKey(0));
+    }
+    if (raw.supplies) {
+      const s = JSON.parse(raw.supplies);
+      Object.keys(s).forEach(k => { RESTAURANT_SUPPLIES[k] = s[k]; });
+    }
+    if (raw.avail) {
+      JSON.parse(raw.avail).forEach(({ id, avail }) => {
+        const p = PHOTOGRAPHERS.find(x => x.id === id);
+        if (p) p.avail = avail;
+      });
+    }
+    return true;
+  } catch(e) { console.warn('PhotoShift: localStorage load failed', e); return false; }
+}
+
+function dbReset() {
+  if (!confirm('Reset all data back to demo defaults?')) return;
+  Object.keys(localStorage).filter(k => k.startsWith(DB_PREFIX)).forEach(k => localStorage.removeItem(k));
+  location.reload();
+}
+
+function dbSeedDemoData() {
+  const w0  = dbGetWeekKey(0);
+  const wm1 = dbGetWeekKey(-1);
+  const wm2 = dbGetWeekKey(-2);
+
+  SALES_DB = {
+    [w0]:  { 'Alex Rivera':4820,'Jordan Kim':3140,'Sam Patel':5390,'Morgan Chen':1760,'Taylor Brooks':3980,'Casey Torres':2450,'Riley Stone':0,'Drew Hall':0 },
+    [wm1]: { 'Alex Rivera':3950,'Jordan Kim':3400,'Sam Patel':4750,'Morgan Chen':1550,'Taylor Brooks':4100,'Casey Torres':2200,'Riley Stone':0,'Drew Hall':0 },
+    [wm2]: { 'Alex Rivera':4200,'Jordan Kim':2850,'Sam Patel':5100,'Morgan Chen':1900,'Taylor Brooks':3600,'Casey Torres':2800,'Riley Stone':0,'Drew Hall':0 },
+  };
+  loadWeekSales(w0);
+
+  SHIFTS_BY_WEEK[w0]  = WEEKLY_SHIFTS.map(s => ({ ...s }));
+  SHIFTS_BY_WEEK[wm1] = [
+    { day:0, dayName:'Monday',    photographer:'Alex Rivera',   restaurant:'Spice Route',     start:'09:00', end:'13:00' },
+    { day:0, dayName:'Monday',    photographer:'Sam Patel',     restaurant:'Casa Fiesta',     start:'10:00', end:'14:00' },
+    { day:0, dayName:'Monday',    photographer:'Morgan Chen',   restaurant:'Burger Palace',   start:'12:00', end:'16:00' },
+    { day:1, dayName:'Tuesday',   photographer:'Jordan Kim',    restaurant:'The Golden Fork', start:'09:00', end:'13:00' },
+    { day:1, dayName:'Tuesday',   photographer:'Taylor Brooks', restaurant:'Harvest Table',   start:'10:00', end:'14:00' },
+    { day:1, dayName:'Tuesday',   photographer:'Casey Torres',  restaurant:'Ocean Catch',     start:'11:00', end:'15:00' },
+    { day:2, dayName:'Wednesday', photographer:'Alex Rivera',   restaurant:'Green Garden',    start:'09:00', end:'13:00' },
+    { day:2, dayName:'Wednesday', photographer:'Sam Patel',     restaurant:'Tuscan Sun',      start:'14:00', end:'17:00' },
+    { day:3, dayName:'Thursday',  photographer:'Jordan Kim',    restaurant:'Steak & Stone',   start:'09:00', end:'13:00' },
+    { day:3, dayName:'Thursday',  photographer:'Taylor Brooks', restaurant:'Spice Route',     start:'10:00', end:'14:00' },
+    { day:3, dayName:'Thursday',  photographer:'Casey Torres',  restaurant:'Ocean Catch',     start:'11:00', end:'15:00' },
+    { day:4, dayName:'Friday',    photographer:'Alex Rivera',   restaurant:'The Golden Fork', start:'09:00', end:'13:00' },
+    { day:4, dayName:'Friday',    photographer:'Sam Patel',     restaurant:'Casa Fiesta',     start:'10:00', end:'14:00' },
+    { day:4, dayName:'Friday',    photographer:'Morgan Chen',   restaurant:'Burger Palace',   start:'13:00', end:'17:00' },
+    { day:5, dayName:'Saturday',  photographer:'Jordan Kim',    restaurant:'Sakura Bites',    start:'10:00', end:'14:00' },
+    { day:5, dayName:'Saturday',  photographer:'Taylor Brooks', restaurant:'Harvest Table',   start:'11:00', end:'15:00' },
+    { day:6, dayName:'Sunday',    photographer:'Sam Patel',     restaurant:'Tuscan Sun',      start:'10:00', end:'14:00' },
+  ];
+  SHIFTS_BY_WEEK[wm2] = [
+    { day:0, dayName:'Monday',    photographer:'Sam Patel',     restaurant:'Tuscan Sun',      start:'09:00', end:'13:00' },
+    { day:0, dayName:'Monday',    photographer:'Taylor Brooks', restaurant:'Harvest Table',   start:'10:00', end:'14:00' },
+    { day:0, dayName:'Monday',    photographer:'Casey Torres',  restaurant:'Ocean Catch',     start:'11:00', end:'15:00' },
+    { day:1, dayName:'Tuesday',   photographer:'Alex Rivera',   restaurant:'The Golden Fork', start:'09:00', end:'13:00' },
+    { day:1, dayName:'Tuesday',   photographer:'Jordan Kim',    restaurant:'Steak & Stone',   start:'10:00', end:'14:00' },
+    { day:1, dayName:'Tuesday',   photographer:'Morgan Chen',   restaurant:'Burger Palace',   start:'12:00', end:'16:00' },
+    { day:2, dayName:'Wednesday', photographer:'Sam Patel',     restaurant:'Casa Fiesta',     start:'09:00', end:'13:00' },
+    { day:2, dayName:'Wednesday', photographer:'Alex Rivera',   restaurant:'Green Garden',    start:'14:00', end:'17:00' },
+    { day:3, dayName:'Thursday',  photographer:'Taylor Brooks', restaurant:'Spice Route',     start:'09:00', end:'13:00' },
+    { day:3, dayName:'Thursday',  photographer:'Jordan Kim',    restaurant:'Sakura Bites',    start:'10:00', end:'14:00' },
+    { day:4, dayName:'Friday',    photographer:'Alex Rivera',   restaurant:'The Golden Fork', start:'09:00', end:'13:00' },
+    { day:4, dayName:'Friday',    photographer:'Casey Torres',  restaurant:'Ocean Catch',     start:'10:00', end:'14:00' },
+    { day:4, dayName:'Friday',    photographer:'Morgan Chen',   restaurant:'Burger Palace',   start:'13:00', end:'17:00' },
+    { day:5, dayName:'Saturday',  photographer:'Sam Patel',     restaurant:'Tuscan Sun',      start:'10:00', end:'14:00' },
+    { day:5, dayName:'Saturday',  photographer:'Taylor Brooks', restaurant:'Harvest Table',   start:'11:00', end:'15:00' },
+    { day:6, dayName:'Sunday',    photographer:'Alex Rivera',   restaurant:'The Golden Fork', start:'10:00', end:'14:00' },
+  ];
+  dbSave();
+}
+
+function dbInit() {
+  const hasData = localStorage.getItem(DB_PREFIX + '_shifts');
+  if (hasData) { dbLoad(); } else { dbSeedDemoData(); }
+}
+
 // ─── ROLE SWITCHER ───────────────────────────────────────────────────────────
 
 let _currentRole = 'manager'; // 'manager' | photographer id (number)
@@ -890,7 +1136,7 @@ function renderMyPortal(photId) {
     <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
       <div class="kpi-card c1"><div class="kpi-label">Shifts This Week</div><div class="kpi-value">${shiftCount}</div><div class="kpi-sub">assigned to you</div></div>
       <div class="kpi-card c2"><div class="kpi-label">Available Days</div><div class="kpi-value">${availCount}</div><div class="kpi-sub">this week</div></div>
-      <div class="kpi-card c3"><div class="kpi-label">Sales Last Week</div><div class="kpi-value" style="font-size:1.4rem">${salesDisplay}</div><div class="kpi-sub">your contribution</div></div>
+      <div class="kpi-card c3"><div class="kpi-label">Sales</div><div class="kpi-value" style="font-size:1.4rem">${salesDisplay}</div><div class="kpi-sub">your contribution</div></div>
     </div>`;
 
   // Availability editor
@@ -912,7 +1158,10 @@ function renderMyPortal(photId) {
     if (!shift) return '';
     return `
       <div class="shift-card">
-        <div class="shift-card-day" style="color:${p.color}">${shortDays[i]}</div>
+        <div style="width:44px;flex-shrink:0">
+          <div class="shift-card-day" style="color:${p.color}">${shortDays[i]}</div>
+          <div style="font-size:0.65rem;color:var(--muted);margin-top:1px">${formatDayDate(i)}</div>
+        </div>
         <div style="width:3px;height:36px;border-radius:2px;background:${p.color};flex-shrink:0"></div>
         <div>
           <div class="shift-card-rest">🍽️ ${shift.restaurant}</div>
@@ -941,7 +1190,17 @@ function renderMyPortal(photId) {
       </div>
     </div>`;
 
-  document.getElementById('portal-content').innerHTML = hero + kpis + availSection + shiftsSection;
+  const weekSel = `
+    <div class="week-selector">
+      <button class="week-nav-btn" onclick="changeWeek(-1)">‹</button>
+      <div>
+        <div class="week-label-text" id="week-label-my-portal">${getWeekLabel(_weekOffset)}</div>
+        <div class="week-sub-text" id="week-sub-my-portal">${getWeekSub(_weekOffset)}</div>
+      </div>
+      <button class="week-nav-btn" onclick="changeWeek(1)">›</button>
+    </div>`;
+
+  document.getElementById('portal-content').innerHTML = hero + weekSel + kpis + availSection + shiftsSection;
 }
 
 function toggleAvail(photId, dayIdx) {
@@ -949,6 +1208,7 @@ function toggleAvail(photId, dayIdx) {
   p.avail[dayIdx] = p.avail[dayIdx] === 1 ? 0 : 1;
   const btn = document.getElementById(`avail-btn-${photId}-${dayIdx}`);
   btn.classList.toggle('on', p.avail[dayIdx] === 1);
+  dbSave();
   // re-render the availability grid in manager's drawer if it's open
   if (_drawerPhotId === photId) _renderPhotDrawer(photId, null);
 }
@@ -989,23 +1249,44 @@ function computeRestSales(restName) {
   return total;
 }
 
-function updateTopRestKPI() {
-  const salesEl = document.getElementById('kpi-top-rest-sales');
-  const nameEl  = document.getElementById('kpi-top-rest-name');
-  if (!salesEl || !nameEl) return;
-  const ranked = RESTAURANTS.map(r => ({ ...r, computed: computeRestSales(r.name) }))
-                             .sort((a, b) => b.computed - a.computed);
-  const top = ranked[0];
-  salesEl.textContent = top && top.computed > 0 ? '$' + top.computed.toLocaleString() : '—';
-  nameEl.textContent  = top && top.computed > 0 ? top.name : 'no shifts yet';
-}
-
-function updateOpenSlotsKPI() {
-  const el = document.getElementById('kpi-open-slots');
-  if (!el) return;
+function updateAllKPIs() {
+  // ── Photographers ──────────────────────────────────────────────
+  const activePhots = new Set(WEEKLY_SHIFTS.map(s => s.photographer)).size;
+  const el = {
+    photTotal:  document.getElementById('kpi-phot-total'),
+    photActive: document.getElementById('kpi-phot-active'),
+    photShifts: document.getElementById('kpi-phot-shifts'),
+    openSlots:  document.getElementById('kpi-open-slots'),
+    restTotal:  document.getElementById('kpi-rest-total'),
+    restCov:    document.getElementById('kpi-rest-covered'),
+    restNeeds:  document.getElementById('kpi-rest-needs'),
+    topSales:   document.getElementById('kpi-top-rest-sales'),
+    topName:    document.getElementById('kpi-top-rest-name'),
+  };
+  if (el.photTotal)  el.photTotal.textContent  = PHOTOGRAPHERS.length;
+  if (el.photActive) el.photActive.textContent = activePhots;
+  if (el.photShifts) el.photShifts.textContent = WEEKLY_SHIFTS.length;
+  // open slots = total possible (1 per restaurant per day) minus filled
   const totalSlots = RESTAURANTS.length * 7;
-  const filled     = WEEKLY_SHIFTS.length;
-  el.textContent   = Math.max(0, totalSlots - filled);
+  if (el.openSlots) el.openSlots.textContent = Math.max(0, totalSlots - WEEKLY_SHIFTS.length);
+
+  // ── Restaurants ────────────────────────────────────────────────
+  const coveredCount = RESTAURANTS.filter(r =>
+    WEEKLY_SHIFTS.some(s => s.restaurant === r.name)
+  ).length;
+  if (el.restTotal) el.restTotal.textContent = RESTAURANTS.length;
+  if (el.restCov)   el.restCov.textContent   = coveredCount;
+  if (el.restNeeds) el.restNeeds.textContent = RESTAURANTS.length - coveredCount;
+
+  // top restaurant by sales
+  if (el.topSales && el.topName) {
+    const ranked = RESTAURANTS
+      .map(r => ({ name: r.name, computed: computeRestSales(r.name) }))
+      .sort((a, b) => b.computed - a.computed);
+    const top = ranked[0];
+    el.topSales.textContent = top && top.computed > 0 ? '$' + top.computed.toLocaleString() : '—';
+    el.topName.textContent  = top && top.computed > 0 ? top.name : 'no shifts yet';
+  }
 }
 
 function renderPhotographers() {
@@ -1030,7 +1311,7 @@ function renderPhotographers() {
         : rank === 2
           ? `<span style="font-size:0.85rem;margin-left:4px" title="3rd place">🥉</span>`
           : '';
-    return `<tr onclick="openPhotDrawer(${p.id})">
+    return `<tr onclick="openPhotDrawer(${p.id})" data-phot-name="${p.name}">
       <td><div class="avatar-row">
         <div class="avatar" style="background:${p.color}22;color:${p.color}">${p.initials}</div>
         <div><div class="avatar-name">${p.name}${rankBadge}</div><div class="avatar-sub">${p.email}</div></div>
@@ -1041,7 +1322,8 @@ function renderPhotographers() {
       <td class="hide-mobile">${availDots}</td>
     </tr>`;
   }).join('');
-  updateOpenSlotsKPI();
+  updateAllKPIs();
+  applyPhotTableFilter();
 }
 
 function renderRestaurants() {
@@ -1060,7 +1342,7 @@ function renderRestaurants() {
           </div>
           <span>${primaryPhot}${assignedPhotographers.length > 1 ? ` <span style="color:var(--muted);font-size:0.72rem">+${assignedPhotographers.length - 1}</span>` : ''}</span>
         </div>`;
-    return `<tr onclick="openRestDrawer(${r.id})">
+    return `<tr onclick="openRestDrawer(${r.id})" data-coverage="${coverage}">
       <td><strong>${r.name}</strong></td>
       <td class="hide-mobile" style="color:var(--muted);font-size:0.78rem">${r.address}</td>
       <td>${photHtml}</td>
@@ -1068,8 +1350,8 @@ function renderRestaurants() {
       <td><span class="badge ${cvgClass}">${coverage}</span></td>
     </tr>`;
   }).join('');
-  updateOpenSlotsKPI();
-  updateTopRestKPI();
+  updateAllKPIs();
+  applyRestTableFilter();
 }
 
 // ─── DRAWERS ─────────────────────────────────────────────────────────────────
@@ -1115,7 +1397,7 @@ function _renderPhotDrawer(id, openFormDay) {
       // Assigned shift row with remove button
       return `
         <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:#f5f3ff;border-left:3px solid ${p.color};margin-bottom:6px">
-          <div style="width:58px;font-size:0.72rem;font-weight:700;color:${p.color}">${dayName.slice(0,3)}</div>
+          <div style="width:58px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:700;color:${p.color}">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
           <div style="flex:1">
             <div style="font-size:0.82rem;font-weight:600;color:var(--text)">🍽️ ${shift.restaurant}</div>
             <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">⏰ ${shift.start} – ${shift.end}</div>
@@ -1130,7 +1412,7 @@ function _renderPhotDrawer(id, openFormDay) {
       const label = p.status === 'Inactive' ? 'Inactive — cannot assign' : 'Not available';
       return `
         <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#fafafa;margin-bottom:6px;opacity:0.4">
-          <div style="width:58px;font-size:0.72rem;font-weight:600;color:var(--muted)">${dayName.slice(0,3)}</div>
+          <div style="width:58px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:600;color:var(--muted)">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
           <div style="font-size:0.75rem;color:var(--muted);font-style:italic">${label}</div>
         </div>`;
     }
@@ -1174,7 +1456,7 @@ function _renderPhotDrawer(id, openFormDay) {
     // Available — idle state with + button
     return `
       <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#f0fdf4;border-left:3px solid #22c98a;margin-bottom:6px">
-        <div style="width:58px;font-size:0.72rem;font-weight:700;color:#22c98a">${dayName.slice(0,3)}</div>
+        <div style="width:58px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:700;color:#22c98a">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
         <div style="flex:1;font-size:0.78rem;color:#22c98a;font-weight:500">Available</div>
         <button onclick="_renderPhotDrawer(${p.id},'${dayName}')"
           style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:#22c98a;color:white;border:none;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap">
@@ -1191,7 +1473,7 @@ function _renderPhotDrawer(id, openFormDay) {
       <div class="drawer-section-title">Contact</div>
       <div class="drawer-row"><span>Email</span><span>${p.email}</span></div>
       <div class="drawer-row"><span>Phone</span><span>${p.phone}</span></div>
-      <div class="drawer-row"><span>Sales Last Week</span><strong>${p.sales > 0 ? '$' + p.sales.toLocaleString() : '—'}</strong></div>
+      <div class="drawer-row"><span>Sales</span><strong>${p.sales > 0 ? '$' + p.sales.toLocaleString() : '—'}</strong></div>
     </div>
     <div class="drawer-section">
       <div class="drawer-section-title">Shifts This Week (${myShifts.length} assigned)</div>
@@ -1255,6 +1537,7 @@ function confirmAssign(photId, dayName, dayIdx) {
   const dayIndex = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].indexOf(dayName);
   WEEKLY_SHIFTS.push({ day: dayIndex, dayName, photographer: p.name, restaurant, start, end });
 
+  dbSave();
   renderPhotographers();
   renderRestaurants();
   _renderPhotDrawer(photId, null);
@@ -1273,6 +1556,7 @@ function showFormError(dayIdx, msg) {
 function removeShift(photographerName, dayName) {
   const idx = WEEKLY_SHIFTS.findIndex(s => s.photographer === photographerName && s.dayName === dayName);
   if (idx !== -1) WEEKLY_SHIFTS.splice(idx, 1);
+  dbSave();
   renderPhotographers();
   renderRestaurants();
   _renderPhotDrawer(_drawerPhotId, null);
@@ -1299,7 +1583,7 @@ function _renderRestDrawer(id, openFormDay) {
       const initials = shift.photographer.split(' ').map(n => n[0]).join('');
       return `
         <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:#f5f3ff;border-left:3px solid ${col};margin-bottom:6px">
-          <div style="width:70px;font-size:0.72rem;font-weight:700;color:${col}">${dayName.slice(0,3)}</div>
+          <div style="width:70px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:700;color:${col}">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
           <div style="width:28px;height:28px;border-radius:50%;background:${col}22;color:${col};display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0">${initials}</div>
           <div style="flex:1">
             <div style="font-size:0.82rem;font-weight:600;color:var(--text)">${shift.photographer}</div>
@@ -1356,7 +1640,7 @@ function _renderRestDrawer(id, openFormDay) {
     // ── Open slot — show + Assign button ─────────────────────────────────────
     return `
       <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#f0fdf4;border-left:3px solid #22c98a;margin-bottom:6px">
-        <div style="width:70px;font-size:0.72rem;font-weight:700;color:#22c98a">${dayName.slice(0,3)}</div>
+        <div style="width:70px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:700;color:#22c98a">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
         <div style="flex:1;font-size:0.78rem;color:#22c98a;font-weight:500">Open — no shoot</div>
         <button onclick="_renderRestDrawer(${id},'${dayName}')"
           style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:#22c98a;color:white;border:none;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap">
@@ -1422,6 +1706,7 @@ function confirmAssignFromRest(restId, dayName, dayIdx) {
   const dayIndex = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].indexOf(dayName);
   WEEKLY_SHIFTS.push({ day: dayIndex, dayName, photographer: photographerName, restaurant: r.name, start, end });
 
+  dbSave();
   renderPhotographers();
   renderRestaurants();
   _renderRestDrawer(restId, null);
@@ -1430,6 +1715,7 @@ function confirmAssignFromRest(restId, dayName, dayIdx) {
 function removeShiftFromRest(restaurantName, dayName) {
   const idx = WEEKLY_SHIFTS.findIndex(s => s.restaurant === restaurantName && s.dayName === dayName);
   if (idx !== -1) WEEKLY_SHIFTS.splice(idx, 1);
+  dbSave();
   renderPhotographers();
   renderRestaurants();
   _renderRestDrawer(_drawerRestId, null);
@@ -1523,13 +1809,148 @@ function saveSupplyItem(restId) {
   }
   if (!RESTAURANT_SUPPLIES[restId]) RESTAURANT_SUPPLIES[restId] = [];
   RESTAURANT_SUPPLIES[restId].push({ item: name, qty, unit, low });
+  dbSave();
   document.getElementById(`supply-list-${restId}`).innerHTML = renderSupplyList(restId);
 }
 
 function removeSupplyItem(restId, idx) {
   if (!RESTAURANT_SUPPLIES[restId]) return;
   RESTAURANT_SUPPLIES[restId].splice(idx, 1);
+  dbSave();
   document.getElementById(`supply-list-${restId}`).innerHTML = renderSupplyList(restId);
+}
+
+// ─── KPI CARD CLICKS ─────────────────────────────────────────────────────────
+
+let _photKpiFilter = null;  // null | 'active'
+let _restKpiFilter = null;  // null | 'covered' | 'uncovered'
+
+function kpiPhotClick(type, card) {
+  // Toggle off if same card clicked again
+  const same = _photKpiFilter === type || (type === 'shifts' && _photKpiFilter === 'shifts') || (type === 'open' && _photKpiFilter === 'open');
+  _photKpiFilter = same ? null : type;
+
+  // Visual active state
+  document.querySelectorAll('#section-photographers .kpi-card').forEach(c => c.classList.remove('kpi-active'));
+  if (_photKpiFilter) card.classList.add('kpi-active');
+
+  // Drawer actions (don't persist as table filter)
+  if (type === 'shifts') {
+    if (!same) showShiftsOverviewDrawer();
+    else closeDrawer();
+    _photKpiFilter = null;
+    return;
+  }
+  if (type === 'open') {
+    if (!same) showOpenSlotsDrawer();
+    else closeDrawer();
+    _photKpiFilter = null;
+    return;
+  }
+
+  // Table filter (all / active)
+  applyPhotTableFilter();
+}
+
+function applyPhotTableFilter() {
+  document.querySelectorAll('#phot-tbody tr').forEach(row => {
+    if (!_photKpiFilter || _photKpiFilter === 'all') { row.style.display = ''; return; }
+    const name = row.dataset.photName;
+    const hasShifts = name && WEEKLY_SHIFTS.some(s => s.photographer === name);
+    row.style.display = (_photKpiFilter === 'active' ? hasShifts : true) ? '' : 'none';
+  });
+}
+
+function kpiRestClick(type, card) {
+  const same = _restKpiFilter === type;
+  _restKpiFilter = same ? null : type;
+
+  document.querySelectorAll('#section-restaurants .kpi-card').forEach(c => c.classList.remove('kpi-active'));
+  if (_restKpiFilter) card.classList.add('kpi-active');
+
+  // Top Sales: open drawer for #1 restaurant
+  if (type === 'top') {
+    if (!same) {
+      const ranked = RESTAURANTS.map(r => ({ ...r, computed: computeRestSales(r.name) }))
+                                .sort((a, b) => b.computed - a.computed);
+      if (ranked[0] && ranked[0].computed > 0) openRestDrawer(ranked[0].id);
+      else openDrawer('<div style="color:var(--muted);text-align:center;padding:30px;font-size:0.9rem">No sales data for this week yet.</div>');
+    } else closeDrawer();
+    _restKpiFilter = null;
+    return;
+  }
+
+  // Table filter
+  applyRestTableFilter();
+}
+
+function applyRestTableFilter() {
+  document.querySelectorAll('#rest-tbody tr').forEach(row => {
+    if (!_restKpiFilter || _restKpiFilter === 'all') { row.style.display = ''; return; }
+    const cov = row.dataset.coverage; // 'Covered' | 'Partial' | 'Uncovered'
+    if (_restKpiFilter === 'covered')   row.style.display = cov === 'Covered'   ? '' : 'none';
+    if (_restKpiFilter === 'uncovered') row.style.display = cov !== 'Covered'   ? '' : 'none';
+  });
+}
+
+function showShiftsOverviewDrawer() {
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const html = days.map((day, i) => {
+    const dayShifts = WEEKLY_SHIFTS.filter(s => s.dayName === day).sort((a, b) => a.start.localeCompare(b.start));
+    const dateLabel = formatDayDate(i);
+    const items = dayShifts.length === 0
+      ? `<div style="color:var(--muted);font-size:0.78rem;padding:4px 8px">No shifts scheduled</div>`
+      : dayShifts.map(s => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--card2);border-radius:8px;margin-bottom:4px;">
+            <div>
+              <div style="font-size:0.82rem;font-weight:600;color:var(--text)">${s.photographer}</div>
+              <div style="font-size:0.72rem;color:var(--muted)">${s.restaurant}</div>
+            </div>
+            <div style="font-size:0.72rem;color:var(--muted);white-space:nowrap;margin-left:12px">${s.start}–${s.end}</div>
+          </div>`).join('');
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+        ${day} · <span style="color:var(--text)">${dateLabel}</span>
+        ${dayShifts.length ? `<span style="color:var(--accent);margin-left:6px">${dayShifts.length} shift${dayShifts.length > 1 ? 's' : ''}</span>` : ''}
+      </div>
+      ${items}
+    </div>`;
+  }).join('');
+
+  openDrawer(`
+    <div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Shift Schedule</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:16px">${WEEKLY_SHIFTS.length} shift${WEEKLY_SHIFTS.length !== 1 ? 's' : ''} total this week</div>
+    ${html}
+  `);
+}
+
+function showOpenSlotsDrawer() {
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const uncovered = [];
+  RESTAURANTS.forEach(r => {
+    days.forEach((day, i) => {
+      if (!WEEKLY_SHIFTS.some(s => s.restaurant === r.name && s.dayName === day)) {
+        uncovered.push({ r, day, dayIdx: i });
+      }
+    });
+  });
+
+  const rows = uncovered.length === 0
+    ? `<div style="text-align:center;padding:30px;color:var(--muted)">🎉 All slots filled this week!</div>`
+    : uncovered.map(({ r, day, dayIdx }) => `
+        <div onclick="openRestDrawer(${r.id})" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+          <div>
+            <div style="font-weight:600;font-size:0.85rem;color:var(--text)">${r.name}</div>
+            <div style="font-size:0.75rem;color:var(--muted)">${day} · ${formatDayDate(dayIdx)}</div>
+          </div>
+          <span class="badge badge-red" style="flex-shrink:0">Unassigned</span>
+        </div>`).join('');
+
+  openDrawer(`
+    <div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Open Slots</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:16px">${uncovered.length} unassigned slot${uncovered.length !== 1 ? 's' : ''} this week</div>
+    <div style="display:flex;flex-direction:column;gap:2px">${rows}</div>
+  `);
 }
 
 // ─── SEARCH / FILTER ─────────────────────────────────────────────────────────
@@ -1550,9 +1971,11 @@ function filterByStatus(tableId, status) {
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
+dbInit();          // load localStorage or seed demo data (mutates WEEKLY_SHIFTS, SALES_DB, RESTAURANT_SUPPLIES, p.avail)
 renderPhotographers();
 renderRestaurants();
 initRoleSelect();
+updateWeekSelectors();
 
 // ─── ADD PHOTOGRAPHER MODAL ─────────────────────────────────────────────────
 
@@ -1607,9 +2030,8 @@ function submitAddPhot(e) {
     avail,
   };
   PHOTOGRAPHERS.push(newPhot);
+  dbSave();
   renderPhotographers();
-  // update KPI total
-  document.querySelector('#section-photographers .kpi-value').textContent = PHOTOGRAPHERS.length;
   closeAddPhotModal();
 }
 </script>
@@ -1834,12 +2256,8 @@ function submitAddRest(e) {
     coverage: 'Uncovered',
   };
   RESTAURANTS.push(newRest);
+  dbSave();
   renderRestaurants();
-
-  // update KPI total
-  const kpiCards = document.querySelectorAll('#section-restaurants .kpi-value');
-  if (kpiCards[0]) kpiCards[0].textContent = RESTAURANTS.length;
-
   closeAddRestModal();
 }
 </script>
