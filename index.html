@@ -837,6 +837,7 @@ function closeDrawer() {
 }
 
 let _drawerPhotId = null;
+let _drawerRestId  = null;
 
 function openPhotDrawer(id) {
   _drawerPhotId = id;
@@ -1006,6 +1007,7 @@ function confirmAssign(photId, dayName, dayIdx) {
   WEEKLY_SHIFTS.push({ day: dayIndex, dayName, photographer: p.name, restaurant, start, end });
 
   renderPhotographers();
+  renderRestaurants();
   _renderPhotDrawer(photId, null);
 }
 
@@ -1022,58 +1024,166 @@ function showFormError(dayIdx, msg) {
 function removeShift(photographerName, dayName) {
   const idx = WEEKLY_SHIFTS.findIndex(s => s.photographer === photographerName && s.dayName === dayName);
   if (idx !== -1) WEEKLY_SHIFTS.splice(idx, 1);
-  const p = PHOTOGRAPHERS.find(x => x.name === photographerName);
-  if (p) p.shifts = WEEKLY_SHIFTS.filter(s => s.photographer === p.name).length;
   renderPhotographers();
+  renderRestaurants();
   _renderPhotDrawer(_drawerPhotId, null);
 }
 
 function openRestDrawer(id) {
-  const r = RESTAURANTS.find(x => x.id === id);
-  const invoicesForRest = INVOICES.filter(i => i.restaurant === r.name);
-  const totalBilled = invoicesForRest.reduce((s, i) => s + i.amount, 0);
+  _drawerRestId = id;
+  _renderRestDrawer(id, null);
+}
 
+function _renderRestDrawer(id, openFormDay) {
+  const r = RESTAURANTS.find(x => x.id === id);
   const restShifts = WEEKLY_SHIFTS.filter(s => s.restaurant === r.name);
   const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-  const phColors = {'Alex Rivera':'#6c63ff','Jordan Kim':'#22c98a','Sam Patel':'#ff6584','Morgan Chen':'#f59e0b','Taylor Brooks':'#56b4d3','Casey Torres':'#c77dff','Riley Stone':'#f77f00','Drew Hall':'#4cc9f0'};
+  // build color map dynamically so new photographers get their colour too
+  const phColors = Object.fromEntries(PHOTOGRAPHERS.map(p => [p.name, p.color]));
 
-  const weekHtml = allDays.map(dayName => {
+  const weekHtml = allDays.map((dayName, dayIdx) => {
     const shift = restShifts.find(s => s.dayName === dayName);
-    if (!shift) return `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--card2);margin-bottom:6px;opacity:0.5">
-        <div style="width:70px;font-size:0.72rem;font-weight:600;color:var(--muted)">${dayName.slice(0,3)}</div>
-        <div style="font-size:0.75rem;color:var(--muted);font-style:italic">No shoot</div>
-      </div>`;
-    const col = phColors[shift.photographer] || '#6c63ff';
-    const initials = shift.photographer.split(' ').map(n=>n[0]).join('');
+
+    // ── Day already has a shift ──────────────────────────────────────────────
+    if (shift) {
+      const col      = phColors[shift.photographer] || '#6c63ff';
+      const initials = shift.photographer.split(' ').map(n => n[0]).join('');
+      return `
+        <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:#f5f3ff;border-left:3px solid ${col};margin-bottom:6px">
+          <div style="width:70px;font-size:0.72rem;font-weight:700;color:${col}">${dayName.slice(0,3)}</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:${col}22;color:${col};display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0">${initials}</div>
+          <div style="flex:1">
+            <div style="font-size:0.82rem;font-weight:600;color:var(--text)">${shift.photographer}</div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">⏰ ${shift.start} – ${shift.end}</div>
+          </div>
+          <button onclick="removeShiftFromRest('${r.name}','${dayName}')" title="Remove shift"
+            style="border:none;background:none;cursor:pointer;color:#dc2626;font-size:1rem;padding:2px 4px;border-radius:4px;line-height:1;opacity:0.7"
+            onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">✕</button>
+        </div>`;
+    }
+
+    // ── Inline assign form ───────────────────────────────────────────────────
+    const activePhoths = PHOTOGRAPHERS.filter(p => p.status !== 'Inactive');
+    const photOptions  = activePhoths.map(p => {
+      const avail = p.avail[dayIdx] === 1;
+      return `<option value="${p.name}">${p.name}${avail ? ' ✓' : ''}</option>`;
+    }).join('');
+
+    if (openFormDay === dayName) {
+      return `
+        <div id="day-row-${dayIdx}" style="border:1.5px dashed #6c63ff;border-radius:10px;padding:12px;margin-bottom:6px;background:#faf9ff">
+          <div style="font-size:0.75rem;font-weight:700;color:#6c63ff;margin-bottom:10px">📅 Assign shift — ${dayName}</div>
+          <div style="margin-bottom:8px">
+            <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">Photographer <span style="font-style:italic;font-weight:400">(✓ = available)</span></label>
+            <select id="form-rest-p-${dayIdx}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;background:white;color:var(--text);outline:none">
+              ${photOptions}
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+            <div>
+              <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">Start time</label>
+              <input id="form-rest-start-${dayIdx}" type="time" value="09:00"
+                style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;background:white;color:var(--text);outline:none"/>
+            </div>
+            <div>
+              <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">End time</label>
+              <input id="form-rest-end-${dayIdx}" type="time" value="13:00"
+                style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;background:white;color:var(--text);outline:none"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="confirmAssignFromRest(${id},'${dayName}',${dayIdx})"
+              style="flex:1;padding:8px;background:#6c63ff;color:white;border:none;border-radius:7px;font-size:0.82rem;font-weight:600;cursor:pointer">
+              ✓ Assign Shift
+            </button>
+            <button onclick="_renderRestDrawer(${id},null)"
+              style="padding:8px 14px;background:var(--card2);color:var(--muted);border:none;border-radius:7px;font-size:0.82rem;cursor:pointer">
+              Cancel
+            </button>
+          </div>
+        </div>`;
+    }
+
+    // ── Open slot — show + Assign button ─────────────────────────────────────
     return `
-      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:#f5f3ff;border-left:3px solid ${col};margin-bottom:6px">
-        <div style="width:70px;font-size:0.72rem;font-weight:700;color:${col}">${dayName.slice(0,3)}</div>
-        <div style="width:28px;height:28px;border-radius:50%;background:${col}22;color:${col};display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0">${initials}</div>
-        <div style="flex:1">
-          <div style="font-size:0.82rem;font-weight:600;color:var(--text)">${shift.photographer}</div>
-          <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">⏰ ${shift.start} – ${shift.end}</div>
-        </div>
+      <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#f0fdf4;border-left:3px solid #22c98a;margin-bottom:6px">
+        <div style="width:70px;font-size:0.72rem;font-weight:700;color:#22c98a">${dayName.slice(0,3)}</div>
+        <div style="flex:1;font-size:0.78rem;color:#22c98a;font-weight:500">Open — no shoot</div>
+        <button onclick="_renderRestDrawer(${id},'${dayName}')"
+          style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:#22c98a;color:white;border:none;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap">
+          + Assign
+        </button>
       </div>`;
   }).join('');
 
-  openDrawer(`
+  const html = `
     <div style="font-size:2.2rem;margin-bottom:12px">🍽️</div>
     <div class="drawer-name">${r.name}</div>
     <div class="drawer-role" style="font-size:0.75rem">📍 ${r.address}</div>
     <div class="drawer-section">
-      <div class="drawer-section-title">Coverage</div>
-      <div class="drawer-row"><span>Status</span><span class="badge ${r.coverage === 'Covered' ? 'badge-green' : r.coverage === 'Partial' ? 'badge-yellow' : 'badge-red'}">${r.coverage}</span></div>
-    </div>
-    <div class="drawer-section">
       <div class="drawer-section-title">Shifts This Week (${restShifts.length} scheduled)</div>
-      ${restShifts.length > 0 ? weekHtml : `<div style="color:var(--muted);font-size:0.8rem;padding:8px 0">No shifts scheduled this week</div>`}
+      ${weekHtml}
     </div>
     <div class="drawer-section">
       <div class="drawer-section-title">Supplies</div>
       <div id="supply-list-${r.id}">${renderSupplyList(r.id)}</div>
     </div>
-  `);
+  `;
+
+  if (document.getElementById('drawer').classList.contains('open')) {
+    document.getElementById('drawer-content').innerHTML = html;
+  } else {
+    openDrawer(html);
+  }
+}
+
+function confirmAssignFromRest(restId, dayName, dayIdx) {
+  const r              = RESTAURANTS.find(x => x.id === restId);
+  const photographerName = document.getElementById(`form-rest-p-${dayIdx}`).value;
+  const start            = document.getElementById(`form-rest-start-${dayIdx}`).value;
+  const end              = document.getElementById(`form-rest-end-${dayIdx}`).value;
+  if (!photographerName || !start || !end) return;
+
+  const prevErr = document.getElementById(`form-err-${dayIdx}`);
+  if (prevErr) prevErr.remove();
+
+  if (start >= end) {
+    showFormError(dayIdx, 'End time must be after start time.');
+    return;
+  }
+
+  const dayShifts = WEEKLY_SHIFTS.filter(s => s.dayName === dayName);
+
+  const photConflict = dayShifts.find(s =>
+    s.photographer === photographerName && timesOverlap(start, end, s.start, s.end)
+  );
+  if (photConflict) {
+    showFormError(dayIdx, `${photographerName} already has a shift at ${photConflict.restaurant} (${photConflict.start}–${photConflict.end}) that overlaps.`);
+    return;
+  }
+
+  const restConflict = dayShifts.find(s =>
+    s.restaurant === r.name && timesOverlap(start, end, s.start, s.end)
+  );
+  if (restConflict) {
+    showFormError(dayIdx, `${r.name} already has ${restConflict.photographer} assigned (${restConflict.start}–${restConflict.end}) during that time.`);
+    return;
+  }
+
+  const dayIndex = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].indexOf(dayName);
+  WEEKLY_SHIFTS.push({ day: dayIndex, dayName, photographer: photographerName, restaurant: r.name, start, end });
+
+  renderPhotographers();
+  renderRestaurants();
+  _renderRestDrawer(restId, null);
+}
+
+function removeShiftFromRest(restaurantName, dayName) {
+  const idx = WEEKLY_SHIFTS.findIndex(s => s.restaurant === restaurantName && s.dayName === dayName);
+  if (idx !== -1) WEEKLY_SHIFTS.splice(idx, 1);
+  renderPhotographers();
+  renderRestaurants();
+  _renderRestDrawer(_drawerRestId, null);
 }
 
 function renderSupplyList(restId) {
