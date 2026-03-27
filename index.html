@@ -428,6 +428,9 @@
       .nav-item { position: relative; }
       .sidebar-footer { padding: 12px 0 0; display: flex; justify-content: center; }
       .manager-name, .sidebar-footer > div > div:last-child { display: none; }
+      .role-switcher { display: none; }
+      .mobile-topbar { display: flex; }
+      body { padding-top: 56px; }
       .main { margin-left: 68px; padding: 20px; }
       .grid-2 { grid-template-columns: 1fr; }
     }
@@ -514,7 +517,10 @@
   <div class="brand-icon">📸</div>
   <div class="brand-text">PhotoShift</div>
   <div class="mobile-page-title" id="mobile-page-title">Photographers</div>
-  <div class="manager-avatar" style="width:30px;height:30px;font-size:0.65rem;margin-left:auto">MG</div>
+  <select id="role-select-mobile" onchange="switchRole(this.value);document.getElementById('role-select').value=this.value"
+    style="margin-left:auto;padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:0.72rem;color:var(--text);background:var(--card2);outline:none;max-width:130px;cursor:pointer">
+    <option value="manager">👔 Manager</option>
+  </select>
 </div>
 
 <!-- SIDEBAR -->
@@ -552,7 +558,7 @@
     </div>
     <div class="role-switcher">
       <div class="role-switcher-label">View as</div>
-      <select class="role-select" id="role-select" onchange="switchRole(this.value)">
+      <select class="role-select" id="role-select" onchange="switchRole(this.value);document.getElementById('role-select-mobile').value=this.value">
         <option value="manager">👔 Manager</option>
       </select>
     </div>
@@ -819,12 +825,15 @@ const RESTAURANT_SUPPLIES = {
 let _currentRole = 'manager'; // 'manager' | photographer id (number)
 
 function initRoleSelect() {
-  const sel = document.getElementById('role-select');
-  PHOTOGRAPHERS.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = `📷 ${p.name}`;
-    sel.appendChild(opt);
+  ['role-select', 'role-select-mobile'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    PHOTOGRAPHERS.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `📷 ${p.name}`;
+      sel.appendChild(opt);
+    });
   });
 }
 
