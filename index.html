@@ -525,11 +525,6 @@
           <span class="search-icon">🔍</span>
           <input type="text" placeholder="Search photographers…" oninput="filterTable('phot-table', this.value)"/>
         </div>
-        <select class="filter-select" onchange="filterByStatus('phot-table', this.value)">
-          <option value="">All statuses</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-        </select>
       </div>
       <div style="overflow-x:auto;">
         <table class="data-table" id="phot-table">
@@ -538,7 +533,7 @@
               <th>Photographer</th>
               <th class="hide-mobile">Phone</th>
               <th>Shifts</th>
-              <th>Status</th>
+              <th>Sales (Last Week)</th>
               <th class="hide-mobile">Availability</th>
             </tr>
           </thead>
@@ -620,14 +615,14 @@
 // ─── DATA ───────────────────────────────────────────────────────────────────
 
 const PHOTOGRAPHERS = [
-  { id:1, name:"Alex Rivera",   initials:"AR", color:"#6c63ff", phone:"(555) 201-4455", shifts:4, util:71, status:"Active",   avail:[1,1,0,1,1,0,1], email:"alex@photoshift.co"  },
-  { id:2, name:"Jordan Kim",    initials:"JK", color:"#22c98a", phone:"(555) 342-8810", shifts:3, util:57, status:"Active",   avail:[1,0,1,1,0,1,0], email:"jordan@photoshift.co"},
-  { id:3, name:"Sam Patel",     initials:"SP", color:"#ff6584", phone:"(555) 187-0023", shifts:5, util:85, status:"Active",   avail:[1,1,1,1,1,0,0], email:"sam@photoshift.co"   },
-  { id:4, name:"Morgan Chen",   initials:"MC", color:"#f59e0b", phone:"(555) 490-7761", shifts:2, util:42, status:"Active",   avail:[0,1,1,0,1,1,0], email:"morgan@photoshift.co"},
-  { id:5, name:"Taylor Brooks", initials:"TB", color:"#56b4d3", phone:"(555) 633-2290", shifts:4, util:71, status:"Active",   avail:[1,1,0,0,1,1,1], email:"taylor@photoshift.co"},
-  { id:6, name:"Casey Torres",  initials:"CT", color:"#c77dff", phone:"(555) 755-1144", shifts:3, util:57, status:"Active",   avail:[1,0,1,1,1,0,0], email:"casey@photoshift.co" },
-  { id:7, name:"Riley Stone",   initials:"RS", color:"#f77f00", phone:"(555) 820-9934", shifts:0, util:0,  status:"Inactive", avail:[0,0,0,0,0,0,0], email:"riley@photoshift.co" },
-  { id:8, name:"Drew Hall",     initials:"DH", color:"#4cc9f0", phone:"(555) 964-5523", shifts:0, util:0,  status:"Inactive", avail:[0,0,0,0,0,0,0], email:"drew@photoshift.co"  },
+  { id:1, name:"Alex Rivera",   initials:"AR", color:"#6c63ff", phone:"(555) 201-4455", shifts:4, util:71, status:"Active",   avail:[1,1,0,1,1,0,1], email:"alex@photoshift.co",   sales:4820 },
+  { id:2, name:"Jordan Kim",    initials:"JK", color:"#22c98a", phone:"(555) 342-8810", shifts:3, util:57, status:"Active",   avail:[1,0,1,1,0,1,0], email:"jordan@photoshift.co", sales:3140 },
+  { id:3, name:"Sam Patel",     initials:"SP", color:"#ff6584", phone:"(555) 187-0023", shifts:5, util:85, status:"Active",   avail:[1,1,1,1,1,0,0], email:"sam@photoshift.co",    sales:5390 },
+  { id:4, name:"Morgan Chen",   initials:"MC", color:"#f59e0b", phone:"(555) 490-7761", shifts:2, util:42, status:"Active",   avail:[0,1,1,0,1,1,0], email:"morgan@photoshift.co", sales:1760 },
+  { id:5, name:"Taylor Brooks", initials:"TB", color:"#56b4d3", phone:"(555) 633-2290", shifts:4, util:71, status:"Active",   avail:[1,1,0,0,1,1,1], email:"taylor@photoshift.co", sales:3980 },
+  { id:6, name:"Casey Torres",  initials:"CT", color:"#c77dff", phone:"(555) 755-1144", shifts:3, util:57, status:"Active",   avail:[1,0,1,1,1,0,0], email:"casey@photoshift.co",  sales:2450 },
+  { id:7, name:"Riley Stone",   initials:"RS", color:"#f77f00", phone:"(555) 820-9934", shifts:0, util:0,  status:"Inactive", avail:[0,0,0,0,0,0,0], email:"riley@photoshift.co",  sales:0    },
+  { id:8, name:"Drew Hall",     initials:"DH", color:"#4cc9f0", phone:"(555) 964-5523", shifts:0, util:0,  status:"Inactive", avail:[0,0,0,0,0,0,0], email:"drew@photoshift.co",   sales:0    },
 ];
 
 const RESTAURANTS = [
@@ -769,11 +764,12 @@ function showSection(id) {
 
 function renderPhotographers() {
   const days = ['M','T','W','T','F','S','S'];
-  document.getElementById('phot-tbody').innerHTML = PHOTOGRAPHERS.map(p => {
+  const sorted = [...PHOTOGRAPHERS].sort((a, b) => b.sales - a.sales);
+  document.getElementById('phot-tbody').innerHTML = sorted.map((p, rank) => {
     const shiftCount = WEEKLY_SHIFTS.filter(s => s.photographer === p.name).length;
-    const statusBadge = p.status === 'Active'
-      ? '<span class="badge badge-green">Active</span>'
-      : '<span class="badge badge-grey">Inactive</span>';
+    const salesDisplay = p.sales > 0
+      ? `<strong>$${p.sales.toLocaleString()}</strong>`
+      : `<span style="color:var(--muted)">—</span>`;
     const availDots = p.avail.map((a, i) =>
       `<span title="${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}" style="
         display:inline-block;width:18px;height:18px;border-radius:4px;text-align:center;line-height:18px;
@@ -781,14 +777,21 @@ function renderPhotographers() {
         background:${a ? '#dcfce7' : '#f1f5f9'};color:${a ? '#16a34a' : '#94a3b8'}
       ">${days[i]}</span>`
     ).join('');
+    const rankBadge = rank === 0
+      ? `<span style="font-size:0.9rem;margin-left:4px" title="Top performer">🏆</span>`
+      : rank === 1
+        ? `<span style="font-size:0.85rem;margin-left:4px" title="2nd place">🥈</span>`
+        : rank === 2
+          ? `<span style="font-size:0.85rem;margin-left:4px" title="3rd place">🥉</span>`
+          : '';
     return `<tr onclick="openPhotDrawer(${p.id})">
       <td><div class="avatar-row">
         <div class="avatar" style="background:${p.color}22;color:${p.color}">${p.initials}</div>
-        <div><div class="avatar-name">${p.name}</div><div class="avatar-sub">${p.email}</div></div>
+        <div><div class="avatar-name">${p.name}${rankBadge}</div><div class="avatar-sub">${p.email}</div></div>
       </div></td>
       <td class="hide-mobile" style="color:var(--muted)">${p.phone}</td>
       <td><strong>${shiftCount}</strong></td>
-      <td>${statusBadge}</td>
+      <td>${salesDisplay}</td>
       <td class="hide-mobile">${availDots}</td>
     </tr>`;
   }).join('');
@@ -849,10 +852,6 @@ function _renderPhotDrawer(id, openFormDay) {
       <div class="avail-dot ${p.avail[i] ? 'yes' : 'no'}">${p.avail[i] ? '✓' : '—'}</div>
     </div>`).join('');
 
-  const assignedItems = INVENTORY.filter(item => item.assignedTo === p.name);
-  const itemsHtml = assignedItems.length
-    ? assignedItems.map(item => `<div class="drawer-row"><span>${item.name}</span><span class="badge badge-grey">${item.category}</span></div>`).join('')
-    : '<div style="color:var(--muted);font-size:0.8rem">No equipment assigned</div>';
 
   const myShifts = WEEKLY_SHIFTS.filter(s => s.photographer === p.name);
   const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
@@ -942,6 +941,7 @@ function _renderPhotDrawer(id, openFormDay) {
       <div class="drawer-section-title">Contact</div>
       <div class="drawer-row"><span>Email</span><span>${p.email}</span></div>
       <div class="drawer-row"><span>Phone</span><span>${p.phone}</span></div>
+      <div class="drawer-row"><span>Sales Last Week</span><strong>${p.sales > 0 ? '$' + p.sales.toLocaleString() : '—'}</strong></div>
     </div>
     <div class="drawer-section">
       <div class="drawer-section-title">Shifts This Week (${myShifts.length} assigned)</div>
@@ -952,10 +952,7 @@ function _renderPhotDrawer(id, openFormDay) {
       <div class="drawer-section-title">Weekly Availability</div>
       <div class="avail-grid">${availGrid}</div>
     </div>
-    <div class="drawer-section">
-      <div class="drawer-section-title">Assigned Equipment</div>
-      ${itemsHtml}
-    </div>`;
+  `;
 
   if (document.getElementById('drawer').classList.contains('open')) {
     document.getElementById('drawer-content').innerHTML = html;
