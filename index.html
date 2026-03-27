@@ -916,9 +916,7 @@ function updateWeekSelectors() {
 }
 
 function changeWeek(delta) {
-  // Clear any active KPI filters
-  _photKpiFilter = null;
-  _restKpiFilter = null;
+  // Clear active KPI card highlight
   document.querySelectorAll('.kpi-card.kpi-active').forEach(c => c.classList.remove('kpi-active'));
   // Save current week's shifts under ISO key
   const oldKey = dbGetWeekKey(_weekOffset);
@@ -1323,7 +1321,6 @@ function renderPhotographers() {
     </tr>`;
   }).join('');
   updateAllKPIs();
-  applyPhotTableFilter();
 }
 
 function renderRestaurants() {
@@ -1351,7 +1348,6 @@ function renderRestaurants() {
     </tr>`;
   }).join('');
   updateAllKPIs();
-  applyRestTableFilter();
 }
 
 // ─── DRAWERS ─────────────────────────────────────────────────────────────────
@@ -1822,135 +1818,198 @@ function removeSupplyItem(restId, idx) {
 
 // ─── KPI CARD CLICKS ─────────────────────────────────────────────────────────
 
-let _photKpiFilter = null;  // null | 'active'
-let _restKpiFilter = null;  // null | 'covered' | 'uncovered'
-
-function kpiPhotClick(type, card) {
-  // Toggle off if same card clicked again
-  const same = _photKpiFilter === type || (type === 'shifts' && _photKpiFilter === 'shifts') || (type === 'open' && _photKpiFilter === 'open');
-  _photKpiFilter = same ? null : type;
-
-  // Visual active state
-  document.querySelectorAll('#section-photographers .kpi-card').forEach(c => c.classList.remove('kpi-active'));
-  if (_photKpiFilter) card.classList.add('kpi-active');
-
-  // Drawer actions (don't persist as table filter)
-  if (type === 'shifts') {
-    if (!same) showShiftsOverviewDrawer();
-    else closeDrawer();
-    _photKpiFilter = null;
-    return;
-  }
-  if (type === 'open') {
-    if (!same) showOpenSlotsDrawer();
-    else closeDrawer();
-    _photKpiFilter = null;
-    return;
-  }
-
-  // Table filter (all / active)
-  applyPhotTableFilter();
+// Shared helper — draw a hoverable list row in a drawer
+function _dRow(onclick, left, right, rightClass) {
+  return `<div onclick="${onclick}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">${left}<div style="flex-shrink:0;margin-left:10px">${right}</div></div>`;
 }
 
-function applyPhotTableFilter() {
-  document.querySelectorAll('#phot-tbody tr').forEach(row => {
-    if (!_photKpiFilter || _photKpiFilter === 'all') { row.style.display = ''; return; }
-    const name = row.dataset.photName;
-    const hasShifts = name && WEEKLY_SHIFTS.some(s => s.photographer === name);
-    row.style.display = (_photKpiFilter === 'active' ? hasShifts : true) ? '' : 'none';
-  });
+function kpiPhotClick(type, card) {
+  const same = card.classList.contains('kpi-active');
+  document.querySelectorAll('#section-photographers .kpi-card').forEach(c => c.classList.remove('kpi-active'));
+  if (same) { closeDrawer(); return; }
+  card.classList.add('kpi-active');
+  if (type === 'all')    _drawerPhotAll();
+  if (type === 'active') _drawerPhotActive();
+  if (type === 'shifts') _drawerShiftSchedule();
+  if (type === 'open')   _drawerOpenSlots();
 }
 
 function kpiRestClick(type, card) {
-  const same = _restKpiFilter === type;
-  _restKpiFilter = same ? null : type;
-
+  const same = card.classList.contains('kpi-active');
   document.querySelectorAll('#section-restaurants .kpi-card').forEach(c => c.classList.remove('kpi-active'));
-  if (_restKpiFilter) card.classList.add('kpi-active');
-
-  // Top Sales: open drawer for #1 restaurant
-  if (type === 'top') {
-    if (!same) {
-      const ranked = RESTAURANTS.map(r => ({ ...r, computed: computeRestSales(r.name) }))
-                                .sort((a, b) => b.computed - a.computed);
-      if (ranked[0] && ranked[0].computed > 0) openRestDrawer(ranked[0].id);
-      else openDrawer('<div style="color:var(--muted);text-align:center;padding:30px;font-size:0.9rem">No sales data for this week yet.</div>');
-    } else closeDrawer();
-    _restKpiFilter = null;
-    return;
-  }
-
-  // Table filter
-  applyRestTableFilter();
+  if (same) { closeDrawer(); return; }
+  card.classList.add('kpi-active');
+  if (type === 'all')       _drawerRestAll();
+  if (type === 'covered')   _drawerRestCovered();
+  if (type === 'uncovered') _drawerRestUncovered();
+  if (type === 'top')       _drawerRestTopSales();
 }
 
-function applyRestTableFilter() {
-  document.querySelectorAll('#rest-tbody tr').forEach(row => {
-    if (!_restKpiFilter || _restKpiFilter === 'all') { row.style.display = ''; return; }
-    const cov = row.dataset.coverage; // 'Covered' | 'Partial' | 'Uncovered'
-    if (_restKpiFilter === 'covered')   row.style.display = cov === 'Covered'   ? '' : 'none';
-    if (_restKpiFilter === 'uncovered') row.style.display = cov !== 'Covered'   ? '' : 'none';
-  });
+// ── Photographer KPI drawers ──────────────────────────────────────────────────
+
+function _drawerPhotAll() {
+  const sorted = [...PHOTOGRAPHERS].sort((a, b) => b.sales - a.sales);
+  const rows = sorted.map(p => {
+    const shifts = WEEKLY_SHIFTS.filter(s => s.photographer === p.name).length;
+    const salesStr = p.sales > 0 ? `<strong style="color:var(--text)">$${p.sales.toLocaleString()}</strong>` : `<span style="color:var(--muted)">—</span>`;
+    const left = `<div style="display:flex;align-items:center;gap:10px">
+      <div class="avatar" style="background:${p.color}22;color:${p.color};width:32px;height:32px;font-size:0.7rem;flex-shrink:0">${p.initials}</div>
+      <div><div style="font-weight:600;font-size:0.85rem">${p.name}</div>
+      <div style="font-size:0.72rem;color:var(--muted)">${shifts} shift${shifts !== 1 ? 's' : ''} · ${salesStr}</div></div></div>`;
+    return _dRow(`openPhotDrawer(${p.id})`, left, `<span style="color:var(--muted);font-size:1rem">›</span>`);
+  }).join('');
+  openDrawer(`<div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">All Photographers</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px">${PHOTOGRAPHERS.length} on the team — tap to view details</div>
+    <div style="display:flex;flex-direction:column;gap:2px">${rows}</div>`);
 }
 
-function showShiftsOverviewDrawer() {
+function _drawerPhotActive() {
+  const active = PHOTOGRAPHERS.filter(p => WEEKLY_SHIFTS.some(s => s.photographer === p.name));
+  const inactive = PHOTOGRAPHERS.filter(p => !WEEKLY_SHIFTS.some(s => s.photographer === p.name));
+  const makeRows = (list, hasShifts) => list.map(p => {
+    const myShifts = WEEKLY_SHIFTS.filter(s => s.photographer === p.name).sort((a, b) => a.day - b.day);
+    const detail = hasShifts
+      ? myShifts.map(s => `<span style="background:var(--bg);border-radius:4px;padding:1px 5px;font-size:0.68rem;margin-right:3px">${s.dayName.slice(0,3)} · ${s.restaurant}</span>`).join('')
+      : `<span style="color:var(--muted);font-size:0.72rem">No shifts assigned</span>`;
+    const left = `<div style="display:flex;align-items:center;gap:10px">
+      <div class="avatar" style="background:${p.color}22;color:${p.color};width:32px;height:32px;font-size:0.7rem;flex-shrink:0">${p.initials}</div>
+      <div><div style="font-weight:600;font-size:0.85rem">${p.name}</div><div style="margin-top:3px">${detail}</div></div></div>`;
+    return _dRow(`openPhotDrawer(${p.id})`, left, `<span style="color:var(--muted);font-size:1rem">›</span>`);
+  }).join('');
+  const bench = inactive.length ? `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:10px 12px 4px">Not assigned (${inactive.length})</div>${makeRows(inactive, false)}` : '';
+  openDrawer(`<div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Active This Week</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px">${active.length} assigned · ${inactive.length} on bench</div>
+    <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 12px 4px">Assigned (${active.length})</div>
+    <div style="display:flex;flex-direction:column;gap:2px">${makeRows(active, true)}${bench}</div>`);
+}
+
+function _drawerShiftSchedule() {
   const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const html = days.map((day, i) => {
     const dayShifts = WEEKLY_SHIFTS.filter(s => s.dayName === day).sort((a, b) => a.start.localeCompare(b.start));
-    const dateLabel = formatDayDate(i);
     const items = dayShifts.length === 0
-      ? `<div style="color:var(--muted);font-size:0.78rem;padding:4px 8px">No shifts scheduled</div>`
-      : dayShifts.map(s => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--card2);border-radius:8px;margin-bottom:4px;">
-            <div>
-              <div style="font-size:0.82rem;font-weight:600;color:var(--text)">${s.photographer}</div>
-              <div style="font-size:0.72rem;color:var(--muted)">${s.restaurant}</div>
-            </div>
-            <div style="font-size:0.72rem;color:var(--muted);white-space:nowrap;margin-left:12px">${s.start}–${s.end}</div>
-          </div>`).join('');
-    return `<div style="margin-bottom:16px">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
-        ${day} · <span style="color:var(--text)">${dateLabel}</span>
-        ${dayShifts.length ? `<span style="color:var(--accent);margin-left:6px">${dayShifts.length} shift${dayShifts.length > 1 ? 's' : ''}</span>` : ''}
-      </div>
-      ${items}
-    </div>`;
+      ? `<div style="color:var(--muted);font-size:0.78rem;padding:4px 10px">No shifts scheduled</div>`
+      : dayShifts.map(s => {
+          const p = PHOTOGRAPHERS.find(x => x.name === s.photographer);
+          const left = `<div style="display:flex;align-items:center;gap:9px">
+            ${p ? `<div class="avatar" style="background:${p.color}22;color:${p.color};width:28px;height:28px;font-size:0.6rem;flex-shrink:0">${p.initials}</div>` : ''}
+            <div><div style="font-size:0.82rem;font-weight:600">${s.photographer}</div>
+            <div style="font-size:0.72rem;color:var(--muted)">${s.restaurant}</div></div></div>`;
+          return _dRow(`openPhotDrawer(${p ? p.id : 0})`, left, `<span style="font-size:0.72rem;color:var(--muted)">${s.start}–${s.end}</span>`);
+        }).join('');
+    return `<div style="margin-bottom:12px">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 12px;margin-bottom:4px">
+        ${day} · ${formatDayDate(i)}${dayShifts.length ? ` <span style="color:var(--accent)">${dayShifts.length} shift${dayShifts.length > 1 ? 's' : ''}</span>` : ''}
+      </div>${items}</div>`;
   }).join('');
-
-  openDrawer(`
-    <div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Shift Schedule</div>
-    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:16px">${WEEKLY_SHIFTS.length} shift${WEEKLY_SHIFTS.length !== 1 ? 's' : ''} total this week</div>
-    ${html}
-  `);
+  openDrawer(`<div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Shift Schedule</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px">${WEEKLY_SHIFTS.length} shift${WEEKLY_SHIFTS.length !== 1 ? 's' : ''} total · tap a shift to view photographer</div>
+    ${html}`);
 }
 
-function showOpenSlotsDrawer() {
+function _drawerOpenSlots() {
   const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const uncovered = [];
   RESTAURANTS.forEach(r => {
     days.forEach((day, i) => {
-      if (!WEEKLY_SHIFTS.some(s => s.restaurant === r.name && s.dayName === day)) {
+      if (!WEEKLY_SHIFTS.some(s => s.restaurant === r.name && s.dayName === day))
         uncovered.push({ r, day, dayIdx: i });
-      }
     });
   });
-
   const rows = uncovered.length === 0
     ? `<div style="text-align:center;padding:30px;color:var(--muted)">🎉 All slots filled this week!</div>`
-    : uncovered.map(({ r, day, dayIdx }) => `
-        <div onclick="openRestDrawer(${r.id})" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
-          <div>
-            <div style="font-weight:600;font-size:0.85rem;color:var(--text)">${r.name}</div>
-            <div style="font-size:0.75rem;color:var(--muted)">${day} · ${formatDayDate(dayIdx)}</div>
-          </div>
-          <span class="badge badge-red" style="flex-shrink:0">Unassigned</span>
-        </div>`).join('');
+    : uncovered.map(({ r, day, dayIdx }) => {
+        const left = `<div><div style="font-weight:600;font-size:0.85rem">${r.name}</div>
+          <div style="font-size:0.75rem;color:var(--muted)">${day} · ${formatDayDate(dayIdx)}</div></div>`;
+        return _dRow(`openRestDrawer(${r.id})`, left, `<span class="badge badge-red">Unassigned</span>`);
+      }).join('');
+  openDrawer(`<div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Open Slots</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px">${uncovered.length} unassigned slot${uncovered.length !== 1 ? 's' : ''} · tap to assign</div>
+    <div style="display:flex;flex-direction:column;gap:2px">${rows}</div>`);
+}
 
-  openDrawer(`
-    <div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Open Slots</div>
-    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:16px">${uncovered.length} unassigned slot${uncovered.length !== 1 ? 's' : ''} this week</div>
-    <div style="display:flex;flex-direction:column;gap:2px">${rows}</div>
-  `);
+// ── Restaurant KPI drawers ────────────────────────────────────────────────────
+
+function _drawerRestAll() {
+  const rows = RESTAURANTS.map(r => {
+    const shifts = WEEKLY_SHIFTS.filter(s => s.restaurant === r.name).length;
+    const phots = [...new Set(WEEKLY_SHIFTS.filter(s => s.restaurant === r.name).map(s => s.photographer))];
+    const cov = shifts === 0 ? 'Uncovered' : 'Covered';
+    const cvgClass = shifts === 0 ? 'badge-red' : 'badge-green';
+    const left = `<div><div style="font-weight:600;font-size:0.85rem">${r.name}</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:2px">${shifts} shift${shifts !== 1 ? 's' : ''}${phots.length ? ' · ' + phots.join(', ') : ''}</div></div>`;
+    return _dRow(`openRestDrawer(${r.id})`, left, `<span class="badge ${cvgClass}">${cov}</span>`);
+  }).join('');
+  openDrawer(`<div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">All Restaurants</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px">${RESTAURANTS.length} locations · tap to manage</div>
+    <div style="display:flex;flex-direction:column;gap:2px">${rows}</div>`);
+}
+
+function _drawerRestCovered() {
+  const covered = RESTAURANTS.filter(r => WEEKLY_SHIFTS.some(s => s.restaurant === r.name));
+  const rows = covered.length === 0
+    ? `<div style="text-align:center;padding:30px;color:var(--muted)">No restaurants have coverage yet.</div>`
+    : covered.map(r => {
+        const myShifts = WEEKLY_SHIFTS.filter(s => s.restaurant === r.name).sort((a, b) => a.day - b.day);
+        const phots = [...new Set(myShifts.map(s => s.photographer))];
+        const days = myShifts.map(s => `<span style="background:var(--bg);border-radius:4px;padding:1px 5px;font-size:0.68rem;margin-right:3px">${s.dayName.slice(0,3)}</span>`).join('');
+        const left = `<div><div style="font-weight:600;font-size:0.85rem">${r.name}</div>
+          <div style="margin-top:3px">${days}</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:2px">${phots.join(' · ')}</div></div>`;
+        return _dRow(`openRestDrawer(${r.id})`, left, `<span class="badge badge-green">${myShifts.length} shift${myShifts.length !== 1 ? 's' : ''}</span>`);
+      }).join('');
+  openDrawer(`<div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Fully Covered</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px">${covered.length} restaurant${covered.length !== 1 ? 's' : ''} with shifts this week</div>
+    <div style="display:flex;flex-direction:column;gap:2px">${rows}</div>`);
+}
+
+function _drawerRestUncovered() {
+  const uncovered = RESTAURANTS.filter(r => !WEEKLY_SHIFTS.some(s => s.restaurant === r.name));
+  const partial   = RESTAURANTS.filter(r => {
+    const days = new Set(WEEKLY_SHIFTS.filter(s => s.restaurant === r.name).map(s => s.dayName));
+    return days.size > 0 && days.size < 7;
+  });
+  const makeRow = (r, badge, badgeClass) => {
+    const myShifts = WEEKLY_SHIFTS.filter(s => s.restaurant === r.name);
+    const covDays  = new Set(myShifts.map(s => s.dayName));
+    const missing  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].filter(d => !covDays.has(d));
+    const detail   = myShifts.length === 0 ? 'No shifts assigned this week'
+      : `Missing: ${missing.map(d => d.slice(0,3)).join(', ')}`;
+    const left = `<div><div style="font-weight:600;font-size:0.85rem">${r.name}</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:2px">${detail}</div></div>`;
+    return _dRow(`openRestDrawer(${r.id})`, left, `<span class="badge ${badgeClass}">${badge}</span>`);
+  };
+  const section = (title, list, badge, cls) => list.length ? `
+    <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:8px 12px 4px">${title} (${list.length})</div>
+    ${list.map(r => makeRow(r, badge, cls)).join('')}` : '';
+  const total = uncovered.length + partial.length;
+  openDrawer(`<div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Needs Coverage</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px">${total} restaurant${total !== 1 ? 's' : ''} need attention · tap to assign</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      ${section('Unassigned', uncovered, 'Uncovered', 'badge-red')}
+      ${section('Partial', partial, 'Partial', 'badge-yellow')}
+      ${total === 0 ? '<div style="text-align:center;padding:30px;color:var(--muted)">🎉 All restaurants covered!</div>' : ''}
+    </div>`);
+}
+
+function _drawerRestTopSales() {
+  const ranked = RESTAURANTS.map(r => ({ ...r, computed: computeRestSales(r.name) }))
+                             .sort((a, b) => b.computed - a.computed);
+  const hasAny = ranked.some(r => r.computed > 0);
+  const rows = ranked.map((r, i) => {
+    const medal = i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : `<span style="color:var(--muted);font-size:0.8rem">#${i+1}</span>`;
+    const left = `<div style="display:flex;align-items:center;gap:10px">
+      <div style="width:28px;text-align:center;font-size:1rem;flex-shrink:0">${medal}</div>
+      <div><div style="font-weight:600;font-size:0.85rem">${r.name}</div>
+      <div style="font-size:0.72rem;color:var(--muted)">${WEEKLY_SHIFTS.filter(s => s.restaurant === r.name).length} shift${WEEKLY_SHIFTS.filter(s => s.restaurant === r.name).length !== 1 ? 's' : ''} this week</div></div></div>`;
+    const right = r.computed > 0
+      ? `<strong style="color:var(--text)">$${r.computed.toLocaleString()}</strong>`
+      : `<span style="color:var(--muted)">—</span>`;
+    return _dRow(`openRestDrawer(${r.id})`, left, right);
+  }).join('');
+  openDrawer(`<div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Sales Ranking</div>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px">${hasAny ? 'Based on photographer sales allocated by shifts worked' : 'No sales data for this week yet'}</div>
+    <div style="display:flex;flex-direction:column;gap:2px">${rows}</div>`);
 }
 
 // ─── SEARCH / FILTER ─────────────────────────────────────────────────────────
