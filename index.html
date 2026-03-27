@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PhotoShift – Manager Dashboard</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -490,15 +490,6 @@
       <span class="nav-icon">🍽️</span>
       <span>Restaurants</span>
     </button>
-    <button class="nav-item" onclick="showSection('inventory')">
-      <span class="nav-icon">🎒</span>
-      <span>Inventory</span>
-    </button>
-    <button class="nav-item" onclick="showSection('billing')">
-      <span class="nav-icon">💳</span>
-      <span>Billing</span>
-      <span class="nav-badge" id="billing-badge">3</span>
-    </button>
   </nav>
   <div class="sidebar-footer">
     <div class="manager-pill">
@@ -601,109 +592,6 @@
     </div>
   </div>
 
-  <!-- ══ INVENTORY ══ -->
-  <div class="section" id="section-inventory">
-    <div class="page-header">
-      <div>
-        <div class="page-title">Inventory</div>
-        <div class="page-sub">Camera equipment and gear assigned to photographers</div>
-      </div>
-      <button class="btn btn-primary">＋ Add Item</button>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi-card c1"><div class="kpi-label">Total Items</div><div class="kpi-value">34</div><div class="kpi-sub">in inventory</div></div>
-      <div class="kpi-card c2"><div class="kpi-label">Assigned</div><div class="kpi-value">26</div><div class="kpi-sub">to photographers</div></div>
-      <div class="kpi-card c3"><div class="kpi-label">Available</div><div class="kpi-value">6</div><div class="kpi-sub">unassigned</div></div>
-      <div class="kpi-card c4"><div class="kpi-label">Needs Service</div><div class="kpi-value">2</div><div class="kpi-sub">poor condition</div></div>
-    </div>
-    <div class="card">
-      <div class="toolbar">
-        <div class="search-box">
-          <span class="search-icon">🔍</span>
-          <input type="text" placeholder="Search items…" oninput="filterTable('inv-table', this.value)"/>
-        </div>
-        <select class="filter-select" onchange="filterByStatus('inv-table', this.value)">
-          <option value="">All categories</option>
-          <option value="Camera Body">Camera Body</option>
-          <option value="Lens">Lens</option>
-          <option value="Lighting">Lighting</option>
-          <option value="Accessory">Accessory</option>
-        </select>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="data-table" id="inv-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th class="hide-mobile">Category</th>
-              <th class="hide-mobile">Serial #</th>
-              <th>Assigned To</th>
-              <th class="hide-mobile">Last Used</th>
-              <th>Condition</th>
-            </tr>
-          </thead>
-          <tbody id="inv-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ BILLING ══ -->
-  <div class="section" id="section-billing">
-    <div class="page-header">
-      <div>
-        <div class="page-title">Billing</div>
-        <div class="page-sub">Invoices, payments, and revenue overview</div>
-      </div>
-      <button class="btn btn-primary">＋ New Invoice</button>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi-card c1"><div class="kpi-label">Revenue (This Month)</div><div class="kpi-value">$14,820</div><div class="kpi-sub">↑ 12% vs last month</div></div>
-      <div class="kpi-card c2"><div class="kpi-label">Paid</div><div class="kpi-value">$11,200</div><div class="kpi-sub">18 invoices</div></div>
-      <div class="kpi-card c3"><div class="kpi-label">Pending</div><div class="kpi-value">$2,340</div><div class="kpi-sub">5 invoices</div></div>
-      <div class="kpi-card c4"><div class="kpi-label">Overdue</div><div class="kpi-value">$1,280</div><div class="kpi-sub" style="color:#dc2626">3 invoices</div></div>
-    </div>
-    <div class="grid-2">
-      <div class="card" style="margin-bottom:0">
-        <div class="card-title">Monthly Revenue</div>
-        <div class="chart-wrap"><canvas id="revenueChart"></canvas></div>
-      </div>
-      <div class="card" style="margin-bottom:0">
-        <div class="card-title">Revenue by Restaurant</div>
-        <div class="chart-wrap"><canvas id="revByRestChart"></canvas></div>
-      </div>
-    </div>
-    <div class="card" style="margin-top:18px">
-      <div class="toolbar">
-        <div class="search-box">
-          <span class="search-icon">🔍</span>
-          <input type="text" placeholder="Search invoices…" oninput="filterTable('bill-table', this.value)"/>
-        </div>
-        <select class="filter-select" onchange="filterByStatus('bill-table', this.value)">
-          <option value="">All statuses</option>
-          <option value="Paid">Paid</option>
-          <option value="Pending">Pending</option>
-          <option value="Overdue">Overdue</option>
-        </select>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="data-table" id="bill-table">
-          <thead>
-            <tr>
-              <th class="hide-mobile">Invoice #</th>
-              <th>Restaurant</th>
-              <th class="hide-mobile">Photographer</th>
-              <th class="hide-mobile">Date</th>
-              <th class="hide-mobile">Due Date</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="bill-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 
 </main>
 
@@ -718,17 +606,6 @@
     <div class="bn-icon-bg"></div>
     <span class="bn-icon">🍽️</span>
     <span>Places</span>
-  </button>
-  <button class="bottom-nav-item" onclick="showSection('inventory', this)" id="bn-inventory">
-    <div class="bn-icon-bg"></div>
-    <span class="bn-icon">🎒</span>
-    <span>Gear</span>
-  </button>
-  <button class="bottom-nav-item" onclick="showSection('billing', this)" id="bn-billing">
-    <div class="bn-icon-bg"></div>
-    <span class="bn-icon">💳</span>
-    <span>Billing</span>
-    <span class="bn-badge">3</span>
   </button>
 </nav>
 
@@ -766,29 +643,6 @@ const RESTAURANTS = [
   { id:10, name:"Steak & Stone",    address:"355 W 46th St, New York, NY 10036",      photographer:"Jordan Kim",    shifts:2, coverage:"Covered"   },
   { id:11, name:"Café Lumière",     address:"21 Bedford Ave, Brooklyn, NY 11222",     photographer:"—",             shifts:0, coverage:"Uncovered" },
   { id:12, name:"Harvest Table",    address:"76 Montague St, Brooklyn, NY 11201",     photographer:"Taylor Brooks", shifts:2, coverage:"Covered"   },
-];
-
-const INVENTORY = [
-  { id:1,  name:"Sony A7 IV",          category:"Camera Body", serial:"SN-4421A", assignedTo:"Alex Rivera",   lastUsed:"Mar 23", condition:"Good" },
-  { id:2,  name:"Sony A7 IV",          category:"Camera Body", serial:"SN-4422B", assignedTo:"Sam Patel",     lastUsed:"Mar 23", condition:"Good" },
-  { id:3,  name:"Canon EOS R5",        category:"Camera Body", serial:"CN-8814C", assignedTo:"Jordan Kim",    lastUsed:"Mar 21", condition:"Good" },
-  { id:4,  name:"Canon EOS R5",        category:"Camera Body", serial:"CN-8815D", assignedTo:"Taylor Brooks", lastUsed:"Mar 22", condition:"Fair" },
-  { id:5,  name:"Nikon Z6 II",         category:"Camera Body", serial:"NK-3301E", assignedTo:"Casey Torres",  lastUsed:"Mar 19", condition:"Good" },
-  { id:6,  name:"Nikon Z6 II",         category:"Camera Body", serial:"NK-3302F", assignedTo:"Morgan Chen",   lastUsed:"Mar 20", condition:"Poor" },
-  { id:7,  name:"Sony 24-70mm f/2.8",  category:"Lens",        serial:"LN-1101G", assignedTo:"Alex Rivera",   lastUsed:"Mar 23", condition:"Good" },
-  { id:8,  name:"Sony 50mm f/1.4",     category:"Lens",        serial:"LN-1102H", assignedTo:"Sam Patel",     lastUsed:"Mar 23", condition:"Good" },
-  { id:9,  name:"Canon 85mm f/1.8",    category:"Lens",        serial:"LN-1103I", assignedTo:"Jordan Kim",    lastUsed:"Mar 21", condition:"Good" },
-  { id:10, name:"Canon 35mm f/1.4",    category:"Lens",        serial:"LN-1104J", assignedTo:"Taylor Brooks", lastUsed:"Mar 22", condition:"Good" },
-  { id:11, name:"Sigma 24mm f/1.8",    category:"Lens",        serial:"LN-1105K", assignedTo:"—",             lastUsed:"Mar 15", condition:"Fair" },
-  { id:12, name:"Tamron 70-200mm",     category:"Lens",        serial:"LN-1106L", assignedTo:"Casey Torres",  lastUsed:"Mar 19", condition:"Good" },
-  { id:13, name:"Godox AD200 Pro",     category:"Lighting",    serial:"LT-2201M", assignedTo:"Alex Rivera",   lastUsed:"Mar 23", condition:"Good" },
-  { id:14, name:"Godox AD200 Pro",     category:"Lighting",    serial:"LT-2202N", assignedTo:"Sam Patel",     lastUsed:"Mar 22", condition:"Good" },
-  { id:15, name:"Profoto B10",         category:"Lighting",    serial:"LT-2203O", assignedTo:"—",             lastUsed:"Mar 10", condition:"Good" },
-  { id:16, name:"Profoto B10",         category:"Lighting",    serial:"LT-2204P", assignedTo:"—",             lastUsed:"Mar 8",  condition:"Poor" },
-  { id:17, name:"Memory Card 256GB",   category:"Accessory",   serial:"AC-3301Q", assignedTo:"Jordan Kim",    lastUsed:"Mar 21", condition:"Good" },
-  { id:18, name:"Memory Card 256GB",   category:"Accessory",   serial:"AC-3302R", assignedTo:"Morgan Chen",   lastUsed:"Mar 20", condition:"Good" },
-  { id:19, name:"Camera Bag (Large)",  category:"Accessory",   serial:"AC-3303S", assignedTo:"Taylor Brooks", lastUsed:"Mar 22", condition:"Fair" },
-  { id:20, name:"Tripod Carbon Fiber", category:"Accessory",   serial:"AC-3304T", assignedTo:"—",             lastUsed:"Mar 17", condition:"Good" },
 ];
 
 // day 0=Mon … 6=Sun
@@ -890,27 +744,9 @@ const RESTAURANT_SUPPLIES = {
   ],
 };
 
-const INVOICES = [
-  { id:"INV-1042", restaurant:"The Golden Fork",  photographer:"Alex Rivera",   date:"Mar 20",  due:"Mar 30",  amount:820,  status:"Pending"  },
-  { id:"INV-1041", restaurant:"Sakura Bites",      photographer:"Jordan Kim",    date:"Mar 18",  due:"Mar 28",  amount:640,  status:"Paid"     },
-  { id:"INV-1040", restaurant:"Tuscan Sun",        photographer:"Sam Patel",     date:"Mar 17",  due:"Mar 27",  amount:1100, status:"Paid"     },
-  { id:"INV-1039", restaurant:"Burger Palace",     photographer:"Morgan Chen",   date:"Mar 15",  due:"Mar 25",  amount:580,  status:"Overdue"  },
-  { id:"INV-1038", restaurant:"Spice Route",       photographer:"Taylor Brooks", date:"Mar 14",  due:"Mar 24",  amount:760,  status:"Overdue"  },
-  { id:"INV-1037", restaurant:"Ocean Catch",       photographer:"Casey Torres",  date:"Mar 12",  due:"Mar 22",  amount:490,  status:"Paid"     },
-  { id:"INV-1036", restaurant:"Casa Fiesta",       photographer:"Sam Patel",     date:"Mar 10",  due:"Mar 20",  amount:940,  status:"Paid"     },
-  { id:"INV-1035", restaurant:"Steak & Stone",     photographer:"Jordan Kim",    date:"Mar 8",   due:"Mar 18",  amount:720,  status:"Paid"     },
-  { id:"INV-1034", restaurant:"Harvest Table",     photographer:"Taylor Brooks", date:"Mar 6",   due:"Mar 16",  amount:680,  status:"Overdue"  },
-  { id:"INV-1033", restaurant:"The Golden Fork",   photographer:"Alex Rivera",   date:"Mar 5",   due:"Mar 15",  amount:820,  status:"Paid"     },
-  { id:"INV-1032", restaurant:"Green Garden",      photographer:"Alex Rivera",   date:"Mar 3",   due:"Mar 13",  amount:440,  status:"Paid"     },
-  { id:"INV-1031", restaurant:"Sakura Bites",      photographer:"Jordan Kim",    date:"Mar 1",   due:"Mar 11",  amount:640,  status:"Pending"  },
-  { id:"INV-1030", restaurant:"Tuscan Sun",        photographer:"Sam Patel",     date:"Feb 27",  due:"Mar 9",   amount:1100, status:"Paid"     },
-  { id:"INV-1029", restaurant:"Spice Route",       photographer:"Taylor Brooks", date:"Feb 25",  due:"Mar 7",   amount:760,  status:"Paid"     },
-  { id:"INV-1028", restaurant:"Ocean Catch",       photographer:"Casey Torres",  date:"Feb 22",  due:"Mar 4",   amount:490,  status:"Pending"  },
-];
-
 // ─── SECTION NAV ────────────────────────────────────────────────────────────
 
-const SECTION_TITLES = { photographers:'Photographers', restaurants:'Restaurants', inventory:'Inventory', billing:'Billing' };
+const SECTION_TITLES = { photographers:'Photographers', restaurants:'Restaurants' };
 
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -925,7 +761,6 @@ function showSection(id) {
   if (bnMatch) bnMatch.classList.add('active');
   const titleEl = document.getElementById('mobile-page-title');
   if (titleEl) titleEl.textContent = SECTION_TITLES[id] || id;
-  if (id === 'billing') renderBillingCharts();
   // scroll to top on mobile
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -983,104 +818,6 @@ function renderRestaurants() {
       <td><span class="badge ${cvgClass}">${coverage}</span></td>
     </tr>`;
   }).join('');
-}
-
-function renderInventory() {
-  const catIcons = { "Camera Body":"📷", "Lens":"🔭", "Lighting":"💡", "Accessory":"🎒" };
-  document.getElementById('inv-tbody').innerHTML = INVENTORY.map(item => {
-    const condClass = item.condition === 'Good' ? 'badge-green' : item.condition === 'Fair' ? 'badge-yellow' : 'badge-red';
-    const condDot = item.condition === 'Good' ? 'cond-good' : item.condition === 'Fair' ? 'cond-fair' : 'cond-poor';
-    const assigned = item.assignedTo === '—'
-      ? '<span class="badge badge-blue">Available</span>'
-      : item.assignedTo;
-    return `<tr onclick="openInvDrawer(${item.id})">
-      <td><strong>${catIcons[item.category] || ''} ${item.name}</strong></td>
-      <td class="hide-mobile"><span class="badge badge-grey">${item.category}</span></td>
-      <td class="hide-mobile" style="color:var(--muted);font-family:monospace;font-size:0.78rem">${item.serial}</td>
-      <td>${assigned}</td>
-      <td class="hide-mobile" style="color:var(--muted)">${item.lastUsed}</td>
-      <td><span class="condition-dot ${condDot}"></span><span class="badge ${condClass}">${item.condition}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-function renderBilling() {
-  document.getElementById('bill-tbody').innerHTML = INVOICES.map(inv => {
-    const stClass = inv.status === 'Paid' ? 'badge-green' : inv.status === 'Pending' ? 'badge-yellow' : 'badge-red';
-    const amtClass = inv.status === 'Overdue' ? 'amount-col overdue' : 'amount-col';
-    return `<tr>
-      <td class="hide-mobile" style="font-family:monospace;font-size:0.8rem;color:var(--accent)">${inv.id}</td>
-      <td><strong>${inv.restaurant}</strong></td>
-      <td class="hide-mobile" style="color:var(--muted)">${inv.photographer}</td>
-      <td class="hide-mobile" style="color:var(--muted)">${inv.date}</td>
-      <td class="hide-mobile" style="color:var(--muted)">${inv.due}</td>
-      <td class="${amtClass}">$${inv.amount.toLocaleString()}</td>
-      <td><span class="badge ${stClass}">${inv.status}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-// ─── BILLING CHARTS ─────────────────────────────────────────────────────────
-let revenueChart, revByRestChart;
-
-function renderBillingCharts() {
-  // Monthly revenue
-  const months = ['Oct','Nov','Dec','Jan','Feb','Mar'];
-  const revenue = [9200, 10800, 11400, 12100, 13250, 14820];
-  const ctx1 = document.getElementById('revenueChart').getContext('2d');
-  if (revenueChart) revenueChart.destroy();
-  revenueChart = new Chart(ctx1, {
-    type: 'bar',
-    data: {
-      labels: months,
-      datasets: [{
-        data: revenue,
-        backgroundColor: months.map((_, i) => i === 5 ? '#6c63ff' : '#ede9ff'),
-        borderRadius: 6,
-        borderSkipped: false,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
-        y: { grid: { color: '#e2e6f0' }, ticks: { color: '#6b7280', font: { size: 10 }, callback: v => '$' + (v/1000).toFixed(0) + 'k' } },
-      }
-    }
-  });
-
-  // Revenue by restaurant (top 6)
-  const byRest = {};
-  INVOICES.filter(i => i.status === 'Paid').forEach(i => {
-    byRest[i.restaurant] = (byRest[i.restaurant] || 0) + i.amount;
-  });
-  const sorted = Object.entries(byRest).sort((a,b) => b[1]-a[1]).slice(0,6);
-  const ctx2 = document.getElementById('revByRestChart').getContext('2d');
-  if (revByRestChart) revByRestChart.destroy();
-  revByRestChart = new Chart(ctx2, {
-    type: 'doughnut',
-    data: {
-      labels: sorted.map(x => x[0].split(' ').slice(0,2).join(' ')),
-      datasets: [{
-        data: sorted.map(x => x[1]),
-        backgroundColor: ['#6c63ff','#22c98a','#ff6584','#f59e0b','#56b4d3','#c77dff'],
-        borderColor: '#ffffff',
-        borderWidth: 3,
-        hoverOffset: 6,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      cutout: '58%',
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: { color: '#6b7280', font: { size: 10 }, padding: 10, usePointStyle: true, boxWidth: 8 }
-        }
-      }
-    }
-  });
 }
 
 // ─── DRAWERS ─────────────────────────────────────────────────────────────────
@@ -1430,35 +1167,6 @@ function saveSupplyItem(restId) {
   document.getElementById(`supply-list-${restId}`).innerHTML = renderSupplyList(restId);
 }
 
-function openInvDrawer(id) {
-  const item = INVENTORY.find(x => x.id === id);
-  const condClass = item.condition === 'Good' ? 'badge-green' : item.condition === 'Fair' ? 'badge-yellow' : 'badge-red';
-  const catIcons = { "Camera Body":"📷", "Lens":"🔭", "Lighting":"💡", "Accessory":"🎒" };
-  openDrawer(`
-    <div style="font-size:2.2rem;margin-bottom:12px">${catIcons[item.category]}</div>
-    <div class="drawer-name">${item.name}</div>
-    <div class="drawer-role">${item.category}</div>
-    <div class="drawer-section">
-      <div class="drawer-section-title">Details</div>
-      <div class="drawer-row"><span>Serial #</span><code style="font-size:0.78rem">${item.serial}</code></div>
-      <div class="drawer-row"><span>Condition</span><span class="badge ${condClass}">${item.condition}</span></div>
-      <div class="drawer-row"><span>Last used</span><span>${item.lastUsed}</span></div>
-    </div>
-    <div class="drawer-section">
-      <div class="drawer-section-title">Assignment</div>
-      <div class="drawer-row"><span>Assigned to</span><strong>${item.assignedTo}</strong></div>
-      ${item.assignedTo !== '—' ? `
-        <div style="margin-top:8px">
-          <button class="btn btn-outline" style="width:100%;justify-content:center" onclick="closeDrawer()">Reassign Equipment</button>
-        </div>` : `
-        <div style="margin-top:8px">
-          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="closeDrawer()">Assign to Photographer</button>
-        </div>`}
-    </div>
-    ${item.condition === 'Poor' ? `<div style="background:#fee2e2;border-radius:10px;padding:12px;font-size:0.8rem;color:#dc2626;margin-top:8px">⚠️ This item is in poor condition and may need servicing before next use.</div>` : ''}
-  `);
-}
-
 // ─── SEARCH / FILTER ─────────────────────────────────────────────────────────
 
 function filterTable(tableId, query) {
@@ -1479,8 +1187,6 @@ function filterByStatus(tableId, status) {
 // ─── INIT ────────────────────────────────────────────────────────────────────
 renderPhotographers();
 renderRestaurants();
-renderInventory();
-renderBilling();
 
 // ─── ADD PHOTOGRAPHER MODAL ─────────────────────────────────────────────────
 
