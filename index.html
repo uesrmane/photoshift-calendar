@@ -942,6 +942,7 @@ function changeWeek(delta) {
 
 const DB_PREFIX = 'photoshift_v1';
 let SALES_DB = {}; // ISO week key -> { photographerName -> sales amount }
+let SHIFT_WORKFLOWS = {}; // key: photId_dayIdx_weekKey -> { status, openInv, closeInv, report }
 
 function dbGetWeekKey(offset) {
   return getWeekDates(offset)[0].toISOString().slice(0, 10);
@@ -959,22 +960,24 @@ function dbSave() {
   const currentKey = dbGetWeekKey(_weekOffset);
   SHIFTS_BY_WEEK[currentKey] = WEEKLY_SHIFTS.map(s => ({ ...s }));
   try {
-    localStorage.setItem(DB_PREFIX + '_shifts',   JSON.stringify(SHIFTS_BY_WEEK));
-    localStorage.setItem(DB_PREFIX + '_sales',    JSON.stringify(SALES_DB));
-    localStorage.setItem(DB_PREFIX + '_supplies', JSON.stringify(RESTAURANT_SUPPLIES));
-    localStorage.setItem(DB_PREFIX + '_avail',    JSON.stringify(
+    localStorage.setItem(DB_PREFIX + '_shifts',    JSON.stringify(SHIFTS_BY_WEEK));
+    localStorage.setItem(DB_PREFIX + '_sales',     JSON.stringify(SALES_DB));
+    localStorage.setItem(DB_PREFIX + '_supplies',  JSON.stringify(RESTAURANT_SUPPLIES));
+    localStorage.setItem(DB_PREFIX + '_avail',     JSON.stringify(
       PHOTOGRAPHERS.map(p => ({ id: p.id, avail: [...p.avail] }))
     ));
+    localStorage.setItem(DB_PREFIX + '_workflows', JSON.stringify(SHIFT_WORKFLOWS));
   } catch(e) { console.warn('PhotoShift: localStorage save failed', e); }
 }
 
 function dbLoad() {
   try {
     const raw = {
-      shifts:   localStorage.getItem(DB_PREFIX + '_shifts'),
-      sales:    localStorage.getItem(DB_PREFIX + '_sales'),
-      supplies: localStorage.getItem(DB_PREFIX + '_supplies'),
-      avail:    localStorage.getItem(DB_PREFIX + '_avail'),
+      shifts:    localStorage.getItem(DB_PREFIX + '_shifts'),
+      sales:     localStorage.getItem(DB_PREFIX + '_sales'),
+      supplies:  localStorage.getItem(DB_PREFIX + '_supplies'),
+      avail:     localStorage.getItem(DB_PREFIX + '_avail'),
+      workflows: localStorage.getItem(DB_PREFIX + '_workflows'),
     };
     if (raw.shifts) {
       Object.assign(SHIFTS_BY_WEEK, JSON.parse(raw.shifts));
@@ -995,6 +998,9 @@ function dbLoad() {
         const p = PHOTOGRAPHERS.find(x => x.id === id);
         if (p) p.avail = avail;
       });
+    }
+    if (raw.workflows) {
+      Object.assign(SHIFT_WORKFLOWS, JSON.parse(raw.workflows));
     }
     return true;
   } catch(e) { console.warn('PhotoShift: localStorage load failed', e); return false; }
@@ -1162,11 +1168,26 @@ function renderMyPortal(photId) {
       : '';
 
     if (shift) {
-      const restObj = RESTAURANTS.find(r => r.name === shift.restaurant);
-      const restClick = restObj ? `openRestDrawer(${restObj.id})` : '';
+      const restObj  = RESTAURANTS.find(r => r.name === shift.restaurant);
+      // Today's shift → workflow; other days → read-only restaurant view
+      const clickFn  = restObj
+        ? isToday
+          ? `openShiftWorkflow(${p.id},${restObj.id},${i})`
+          : `openRestDrawer(${restObj.id})`
+        : '';
+      // Show workflow status badge for today
+      const wfKey    = isToday ? _swKey(p.id, i) : null;
+      const wfState  = wfKey && SHIFT_WORKFLOWS[wfKey] ? SHIFT_WORKFLOWS[wfKey].status : 'not_started';
+      const cta = isToday
+        ? wfState === 'closed'
+          ? `<span style="background:#22c98a;color:white;font-size:0.6rem;font-weight:700;padding:2px 7px;border-radius:8px">✓ Closed</span>`
+          : wfState !== 'not_started'
+            ? `<span style="background:#f59e0b;color:white;font-size:0.6rem;font-weight:700;padding:2px 7px;border-radius:8px">● Active</span>`
+            : `<span style="background:#6c63ff;color:white;font-size:0.6rem;font-weight:700;padding:2px 7px;border-radius:8px">▶ Start</span>`
+        : `<span style="color:var(--muted);font-size:1.1rem;opacity:0.45">›</span>`;
       const todayBg = isToday ? 'background:#ede9fe;box-shadow:0 0 0 1.5px #6c63ff33;' : '';
       return `
-        <div class="shift-card" onclick="${restClick}"
+        <div class="shift-card" onclick="${clickFn}"
           style="cursor:pointer;${todayBg}transition:box-shadow 0.13s,transform 0.1s;"
           onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 14px rgba(0,0,0,0.09)'"
           onmouseout="this.style.transform='';this.style.boxShadow='${isToday ? '0 0 0 1.5px #6c63ff33' : 'none'}'">
@@ -1179,7 +1200,7 @@ function renderMyPortal(photId) {
             <div class="shift-card-rest">🍽️ ${shift.restaurant}</div>
             <div class="shift-card-time">⏰ ${shift.start} – ${shift.end}</div>
           </div>
-          <div style="color:var(--muted);font-size:1.1rem;opacity:0.45;flex-shrink:0;padding-left:4px">›</div>
+          <div style="flex-shrink:0;padding-left:6px">${cta}</div>
         </div>`;
     }
 
@@ -2090,6 +2111,357 @@ function _drawerRestTopSales() {
   openDrawer(`<div style="font-weight:700;font-size:1.05rem;margin-bottom:4px">Sales Ranking</div>
     <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px">${hasAny ? 'Based on photographer sales allocated by shifts worked' : 'No sales data for this week yet'}</div>
     <div style="display:flex;flex-direction:column;gap:2px">${rows}</div>`);
+}
+
+// ─── SHIFT WORKFLOW ──────────────────────────────────────────────────────────
+// States: not_started → opening_inventory → active → closing_inventory → reporting → closed
+
+function _swKey(photId, dayIdx) {
+  return `${photId}_${dayIdx}_${dbGetWeekKey(_weekOffset)}`;
+}
+
+function openShiftWorkflow(photId, restId, dayIdx) {
+  const key = _swKey(photId, dayIdx);
+  if (!SHIFT_WORKFLOWS[key]) {
+    SHIFT_WORKFLOWS[key] = { status: 'not_started', openInv: null, closeInv: null, report: null };
+  }
+  _renderShiftWorkflow(photId, restId, dayIdx);
+}
+
+function _swTransition(photId, restId, dayIdx, newStatus, extra) {
+  const key = _swKey(photId, dayIdx);
+  if (!SHIFT_WORKFLOWS[key]) SHIFT_WORKFLOWS[key] = { status: 'not_started', openInv: null, closeInv: null, report: null };
+  SHIFT_WORKFLOWS[key].status = newStatus;
+  if (extra) Object.assign(SHIFT_WORKFLOWS[key], extra);
+  dbSave();
+  // refresh shift card badge in the portal
+  if (_currentRole !== 'manager') renderMyPortal(_currentRole);
+  _renderShiftWorkflow(photId, restId, dayIdx);
+}
+
+function _swProgress(status) {
+  const steps = [
+    { id: 'opening_inventory', label: 'Open Inv.' },
+    { id: 'active',            label: 'Active'    },
+    { id: 'closing_inventory', label: 'Close Inv.'},
+    { id: 'reporting',         label: 'Report'    },
+    { id: 'closed',            label: 'Closed'    },
+  ];
+  const order = ['not_started','opening_inventory','active','closing_inventory','reporting','closed'];
+  const curIdx = order.indexOf(status);
+  const dots = steps.map((s, i) => {
+    const sIdx = order.indexOf(s.id);
+    const done    = sIdx < curIdx;
+    const current = sIdx === curIdx;
+    const color   = done ? '#22c98a' : current ? '#6c63ff' : 'var(--border)';
+    const txtCol  = done || current ? (done ? '#22c98a' : '#6c63ff') : 'var(--muted)';
+    const icon    = done ? '✓' : i + 1;
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1">
+      <div style="width:26px;height:26px;border-radius:50%;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;transition:background 0.2s">${icon}</div>
+      <div style="font-size:0.6rem;color:${txtCol};font-weight:${current?'700':'400'};text-align:center;white-space:nowrap">${s.label}</div>
+    </div>`;
+  });
+  // connector lines between dots
+  const withLines = [];
+  dots.forEach((d, i) => {
+    withLines.push(d);
+    if (i < dots.length - 1) {
+      const sIdx = order.indexOf(steps[i].id);
+      const lineColor = sIdx < curIdx ? '#22c98a' : 'var(--border)';
+      withLines.push(`<div style="flex:2;height:2px;background:${lineColor};margin-bottom:16px;transition:background 0.2s"></div>`);
+    }
+  });
+  return `<div style="display:flex;align-items:center;gap:0;margin-bottom:20px;padding:14px 10px 4px">${withLines.join('')}</div>`;
+}
+
+function _renderShiftWorkflow(photId, restId, dayIdx) {
+  const key    = _swKey(photId, dayIdx);
+  const wf     = SHIFT_WORKFLOWS[key] || { status: 'not_started' };
+  const status = wf.status;
+  const rest   = RESTAURANTS.find(r => r.id === restId) || {};
+  const phot   = PHOTOGRAPHERS.find(p => p.id === photId) || {};
+  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const shift  = WEEKLY_SHIFTS.find(s => s.photographer === phot.name && s.dayName === allDays[dayIdx]);
+
+  const header = `
+    <div style="margin-bottom:4px">
+      <div style="font-weight:700;font-size:1.05rem">Shift Workflow</div>
+      <div style="color:var(--muted);font-size:0.78rem;margin-top:2px">🍽️ ${rest.name || 'Restaurant'} &nbsp;·&nbsp; ⏰ ${shift ? shift.start + ' – ' + shift.end : 'Today'}</div>
+    </div>`;
+
+  let body = '';
+
+  if (status === 'not_started') {
+    body = `
+      <div style="text-align:center;padding:24px 8px 8px">
+        <div style="font-size:2.5rem;margin-bottom:12px">📸</div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:8px">Ready to start your shift?</div>
+        <div style="color:var(--muted);font-size:0.82rem;margin-bottom:24px;line-height:1.5">Once you start, you'll walk through an opening inventory count, active shooting, closing inventory, and a final sales report.</div>
+        <button onclick="_swTransition(${photId},${restId},${dayIdx},'opening_inventory')"
+          style="background:#6c63ff;color:white;border:none;border-radius:10px;padding:11px 32px;font-size:0.92rem;font-weight:700;cursor:pointer;width:100%;transition:opacity 0.15s"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">▶ Start Shift</button>
+      </div>`;
+
+  } else if (status === 'opening_inventory') {
+    const supplies = (RESTAURANT_SUPPLIES[restId] || []);
+    const saved    = wf.openInv || {};
+    const rows = supplies.length
+      ? supplies.map((s, idx) => {
+          const val = saved[idx] !== undefined ? saved[idx] : s.qty;
+          const low  = val <= s.low;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1;font-size:0.82rem">${s.item}</div>
+            <div style="font-size:0.72rem;color:var(--muted);width:40px;text-align:right">${s.unit}</div>
+            <input type="number" id="sw-oi-${idx}" value="${val}" min="0"
+              style="width:60px;text-align:center;border:1px solid ${low ? '#ff6584' : 'var(--border)'};border-radius:6px;padding:4px 6px;font-size:0.82rem;background:${low ? '#fff5f7' : 'white'}"
+              oninput="this.style.borderColor=+this.value<=${s.low}?'#ff6584':'var(--border)';this.style.background=+this.value<=${s.low}?'#fff5f7':'white'">
+            ${low ? `<div style="font-size:0.65rem;color:#ff6584;font-weight:700;width:28px">LOW</div>` : `<div style="width:28px"></div>`}
+          </div>`;
+        }).join('')
+      : `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;padding:12px 0">No supply items listed for this restaurant.</div>`;
+
+    body = `
+      <div style="font-weight:600;font-size:0.88rem;margin-bottom:6px">Opening Inventory Count</div>
+      <div style="color:var(--muted);font-size:0.78rem;margin-bottom:12px">Count each item as you find it at the start of your shift. Edit quantities as needed.</div>
+      <div style="margin-bottom:16px">${rows}</div>
+      <button onclick="_swSaveOpenInventory(${photId},${restId},${dayIdx},${supplies.length})"
+        style="background:#6c63ff;color:white;border:none;border-radius:10px;padding:10px 0;width:100%;font-size:0.88rem;font-weight:700;cursor:pointer;transition:opacity 0.15s"
+        onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save & Begin Shoot →</button>`;
+
+  } else if (status === 'active') {
+    body = `
+      <div style="text-align:center;padding:16px 8px 8px">
+        <div style="font-size:2.2rem;margin-bottom:10px">🎬</div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:6px">Shift Active – Go Shoot!</div>
+        <div style="color:var(--muted);font-size:0.82rem;margin-bottom:8px;line-height:1.5">Opening inventory saved. Come back when you're done shooting to complete the closing inventory count.</div>
+        <div style="background:#ede9ff;border-radius:10px;padding:12px;margin-bottom:20px">
+          <div style="font-size:0.72rem;color:#6c63ff;font-weight:700;margin-bottom:6px">OPENING INVENTORY SNAPSHOT</div>
+          ${(() => {
+            const supplies = RESTAURANT_SUPPLIES[restId] || [];
+            const oi = wf.openInv || {};
+            if (!supplies.length) return '<div style="color:var(--muted);font-size:0.78rem">No items recorded.</div>';
+            return supplies.map((s, idx) => {
+              const val = oi[idx] !== undefined ? oi[idx] : s.qty;
+              const low = +val <= s.low;
+              return `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:2px 0">
+                <span style="color:var(--text)">${s.item}</span>
+                <span style="color:${low ? '#ff6584' : '#22c98a'};font-weight:600">${val} ${s.unit}${low ? ' ⚠️' : ''}</span>
+              </div>`;
+            }).join('');
+          })()}
+        </div>
+        <button onclick="_swTransition(${photId},${restId},${dayIdx},'closing_inventory')"
+          style="background:#f59e0b;color:white;border:none;border-radius:10px;padding:11px 0;width:100%;font-size:0.88rem;font-weight:700;cursor:pointer;transition:opacity 0.15s"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Done Shooting – Close Inventory →</button>
+      </div>`;
+
+  } else if (status === 'closing_inventory') {
+    const supplies = RESTAURANT_SUPPLIES[restId] || [];
+    const openInv  = wf.openInv || {};
+    const saved    = wf.closeInv || {};
+    const rows = supplies.length
+      ? supplies.map((s, idx) => {
+          const openVal  = openInv[idx] !== undefined ? openInv[idx] : s.qty;
+          const closeVal = saved[idx]   !== undefined ? saved[idx]   : openVal;
+          const diff     = +closeVal - +openVal;
+          const diffStr  = diff > 0 ? `+${diff}` : `${diff}`;
+          const diffCol  = diff < 0 ? '#ff6584' : diff > 0 ? '#22c98a' : 'var(--muted)';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1;font-size:0.8rem">${s.item}</div>
+            <div style="font-size:0.7rem;color:var(--muted);text-align:right">${openVal}<span style="color:var(--border)">→</span></div>
+            <input type="number" id="sw-ci-${idx}" value="${closeVal}" min="0"
+              style="width:58px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:0.82rem;background:white"
+              oninput="document.getElementById('sw-ci-diff-${idx}').textContent=(+this.value-${openVal}>=0?'+':'')+(+this.value-${openVal});document.getElementById('sw-ci-diff-${idx}').style.color=+this.value-${openVal}<0?'#ff6584':+this.value-${openVal}>0?'#22c98a':'var(--muted)'">
+            <div id="sw-ci-diff-${idx}" style="width:36px;font-size:0.72rem;font-weight:700;color:${diffCol};text-align:right">${diffStr}</div>
+          </div>`;
+        }).join('')
+      : `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;padding:12px 0">No supply items listed.</div>`;
+
+    body = `
+      <div style="font-weight:600;font-size:0.88rem;margin-bottom:6px">Closing Inventory Count</div>
+      <div style="color:var(--muted);font-size:0.78rem;margin-bottom:12px">Update quantities after your shift. Changes from opening are shown.</div>
+      <div style="margin-bottom:16px">${rows}</div>
+      <button onclick="_swSaveCloseInventory(${photId},${restId},${dayIdx},${supplies.length})"
+        style="background:#6c63ff;color:white;border:none;border-radius:10px;padding:10px 0;width:100%;font-size:0.88rem;font-weight:700;cursor:pointer;transition:opacity 0.15s"
+        onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save & Go to Report →</button>`;
+
+  } else if (status === 'reporting') {
+    const saved  = wf.report || {};
+    const salesVal   = saved.sales   !== undefined ? saved.sales   : '';
+    const notePub    = saved.notePub  !== undefined ? saved.notePub  : '';
+    const notePriv   = saved.notePriv !== undefined ? saved.notePriv : '';
+    const noteVis    = saved.noteVis  || 'public';
+    const photoName  = saved.photoName || '';
+
+    body = `
+      <div style="font-weight:600;font-size:0.88rem;margin-bottom:14px">Sales Report</div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:0.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">SALES AMOUNT ($)</label>
+        <input type="number" id="sw-sales" value="${salesVal}" min="0" placeholder="e.g. 1200"
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:0.92rem;background:white">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:0.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">ATTACH PHOTO (optional)</label>
+        <div id="sw-photo-preview" style="margin-bottom:6px;${photoName ? '' : 'display:none'}">
+          <div style="background:#ede9ff;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#6c63ff;display:flex;align-items:center;gap:8px">
+            <span>📎</span><span id="sw-photo-name">${photoName}</span>
+            <button onclick="document.getElementById('sw-photo-name').textContent='';document.getElementById('sw-photo-preview').style.display='none';document.getElementById('sw-photo-input').value='';_swClearPhoto(${photId},${dayIdx})"
+              style="margin-left:auto;background:none;border:none;cursor:pointer;color:#ff6584;font-size:0.85rem">✕</button>
+          </div>
+        </div>
+        <label for="sw-photo-input" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--card2);border:1.5px dashed var(--border);border-radius:8px;padding:10px 14px;font-size:0.82rem;color:var(--muted);transition:border-color 0.15s"
+          onmouseover="this.style.borderColor='#6c63ff'" onmouseout="this.style.borderColor='var(--border)'">
+          <span style="font-size:1.2rem">📷</span> Click to attach a photo from your device
+        </label>
+        <input type="file" id="sw-photo-input" accept="image/*" style="display:none"
+          onchange="_swPreviewPhoto(${photId},${dayIdx},this)">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:0.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">NOTE (optional)</label>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button id="sw-note-pub-btn" onclick="_swSetNoteVis('public')"
+            style="flex:1;border-radius:7px;padding:6px 0;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid ${noteVis==='public' ? '#6c63ff' : 'var(--border)'};background:${noteVis==='public' ? '#ede9ff' : 'white'};color:${noteVis==='public' ? '#6c63ff' : 'var(--muted)'}">
+            🌐 Public
+          </button>
+          <button id="sw-note-priv-btn" onclick="_swSetNoteVis('private')"
+            style="flex:1;border-radius:7px;padding:6px 0;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid ${noteVis==='private' ? '#6c63ff' : 'var(--border)'};background:${noteVis==='private' ? '#ede9ff' : 'white'};color:${noteVis==='private' ? '#6c63ff' : 'var(--muted)'}">
+            🔒 Private
+          </button>
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-bottom:6px">${noteVis === 'public' ? 'Visible to the restaurant manager.' : 'Only visible to your own manager.'}</div>
+        <textarea id="sw-note" rows="3" placeholder="Add a note about the shift…"
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:0.82rem;resize:vertical;background:white">${noteVis === 'public' ? notePub : notePriv}</textarea>
+      </div>
+      <button onclick="_swSubmitReport(${photId},${restId},${dayIdx})"
+        style="background:#22c98a;color:white;border:none;border-radius:10px;padding:11px 0;width:100%;font-size:0.92rem;font-weight:700;cursor:pointer;transition:opacity 0.15s;margin-top:4px"
+        onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">✓ Close Shift</button>`;
+
+  } else if (status === 'closed') {
+    const rep   = wf.report || {};
+    const oi    = wf.openInv  || {};
+    const ci    = wf.closeInv || {};
+    const supplies = RESTAURANT_SUPPLIES[restId] || [];
+    const invRows  = supplies.map((s, idx) => {
+      const o = oi[idx] !== undefined ? oi[idx] : s.qty;
+      const c = ci[idx] !== undefined ? ci[idx] : o;
+      const d = +c - +o;
+      const dStr = d > 0 ? `+${d}` : `${d}`;
+      const dCol = d < 0 ? '#ff6584' : d > 0 ? '#22c98a' : 'var(--muted)';
+      return `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:3px 0">
+        <span>${s.item}</span>
+        <span style="color:var(--muted)">${o} → ${c} <strong style="color:${dCol}">(${dStr})</strong></span>
+      </div>`;
+    }).join('') || '<div style="color:var(--muted);font-size:0.78rem">No items.</div>';
+
+    body = `
+      <div style="text-align:center;padding:10px 0 16px">
+        <div style="font-size:2.4rem;margin-bottom:8px">✅</div>
+        <div style="font-weight:700;font-size:1rem;color:#22c98a;margin-bottom:4px">Shift Closed</div>
+        <div style="color:var(--muted);font-size:0.8rem">All data has been saved.</div>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:0.7rem;color:var(--muted);font-weight:700;margin-bottom:8px">SALES</div>
+        <div style="font-size:1.4rem;font-weight:800;color:var(--text)">${rep.sales > 0 ? '$' + (+rep.sales).toLocaleString() : '—'}</div>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:0.7rem;color:var(--muted);font-weight:700;margin-bottom:8px">INVENTORY CHANGES</div>
+        ${invRows}
+      </div>
+      ${rep.photoName ? `<div style="background:#ede9ff;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.8rem;color:#6c63ff;display:flex;align-items:center;gap:8px"><span>📎</span><span>${rep.photoName}</span></div>` : ''}
+      ${(rep.notePub || rep.notePriv) ? `<div style="background:var(--card2);border-radius:10px;padding:14px;margin-bottom:4px">
+        <div style="font-size:0.7rem;color:var(--muted);font-weight:700;margin-bottom:6px">NOTES</div>
+        ${rep.notePub  ? `<div style="font-size:0.8rem;margin-bottom:4px"><span style="font-size:0.65rem;background:#22c98a22;color:#22c98a;padding:1px 6px;border-radius:8px;font-weight:700;margin-right:5px">PUBLIC</span>${rep.notePub}</div>` : ''}
+        ${rep.notePriv ? `<div style="font-size:0.8rem"><span style="font-size:0.65rem;background:#6c63ff22;color:#6c63ff;padding:1px 6px;border-radius:8px;font-weight:700;margin-right:5px">PRIVATE</span>${rep.notePriv}</div>` : ''}
+      </div>` : ''}`;
+  }
+
+  openDrawer(`${header}${_swProgress(status)}<div>${body}</div>`);
+}
+
+function _swSaveOpenInventory(photId, restId, dayIdx, count) {
+  const inv = {};
+  for (let i = 0; i < count; i++) {
+    const el = document.getElementById(`sw-oi-${i}`);
+    if (el) inv[i] = +el.value;
+  }
+  _swTransition(photId, restId, dayIdx, 'active', { openInv: inv });
+}
+
+function _swSaveCloseInventory(photId, restId, dayIdx, count) {
+  const inv = {};
+  for (let i = 0; i < count; i++) {
+    const el = document.getElementById(`sw-ci-${i}`);
+    if (el) inv[i] = +el.value;
+  }
+  _swTransition(photId, restId, dayIdx, 'reporting', { closeInv: inv });
+}
+
+function _swSetNoteVis(vis) {
+  // Save current textarea content first, then swap
+  const ta = document.getElementById('sw-note');
+  const pubBtn  = document.getElementById('sw-note-pub-btn');
+  const privBtn = document.getElementById('sw-note-priv-btn');
+  if (!ta) return;
+  // Style the active button
+  if (vis === 'public') {
+    pubBtn.style.borderColor  = '#6c63ff'; pubBtn.style.background  = '#ede9ff'; pubBtn.style.color  = '#6c63ff';
+    privBtn.style.borderColor = 'var(--border)'; privBtn.style.background = 'white'; privBtn.style.color = 'var(--muted)';
+    ta.placeholder = 'Public note visible to the restaurant manager…';
+    const hint = ta.parentElement.querySelector('div');
+    if (hint) hint.textContent = 'Visible to the restaurant manager.';
+  } else {
+    privBtn.style.borderColor = '#6c63ff'; privBtn.style.background  = '#ede9ff'; privBtn.style.color  = '#6c63ff';
+    pubBtn.style.borderColor  = 'var(--border)'; pubBtn.style.background  = 'white'; pubBtn.style.color  = 'var(--muted)';
+    ta.placeholder = 'Private note only visible to your manager…';
+    const hint = ta.parentElement.querySelector('div');
+    if (hint) hint.textContent = 'Only visible to your own manager.';
+  }
+  // Store current note vis on a data attribute so submit can read it
+  ta.dataset.noteVis = vis;
+}
+
+function _swPreviewPhoto(photId, dayIdx, input) {
+  if (!input.files || !input.files[0]) return;
+  const name = input.files[0].name;
+  const preview = document.getElementById('sw-photo-preview');
+  const nameEl  = document.getElementById('sw-photo-name');
+  if (preview) { preview.style.display = ''; }
+  if (nameEl)  { nameEl.textContent = name; }
+}
+
+function _swClearPhoto(photId, dayIdx) {
+  // just clears the preview — the submit will write undefined
+}
+
+function _swSubmitReport(photId, restId, dayIdx) {
+  const salesEl  = document.getElementById('sw-sales');
+  const noteEl   = document.getElementById('sw-note');
+  const photoEl  = document.getElementById('sw-photo-input');
+  const sales    = salesEl  ? +salesEl.value  : 0;
+  const noteVis  = (noteEl && noteEl.dataset.noteVis) ? noteEl.dataset.noteVis : 'public';
+  const noteText = noteEl ? noteEl.value.trim() : '';
+  const photoName = (photoEl && photoEl.files && photoEl.files[0]) ? photoEl.files[0].name : (SHIFT_WORKFLOWS[_swKey(photId, dayIdx)]?.report?.photoName || '');
+
+  const report = {
+    sales,
+    noteVis,
+    notePub:  noteVis === 'public'  ? noteText : (SHIFT_WORKFLOWS[_swKey(photId, dayIdx)]?.report?.notePub  || ''),
+    notePriv: noteVis === 'private' ? noteText : (SHIFT_WORKFLOWS[_swKey(photId, dayIdx)]?.report?.notePriv || ''),
+    photoName,
+  };
+
+  // Post sales to SALES_DB and photographer
+  if (sales > 0) {
+    const wkKey = dbGetWeekKey(_weekOffset);
+    if (!SALES_DB[wkKey]) SALES_DB[wkKey] = {};
+    const phot = PHOTOGRAPHERS.find(p => p.id === photId);
+    if (phot) {
+      SALES_DB[wkKey][phot.name] = (SALES_DB[wkKey][phot.name] || 0) + sales;
+      loadWeekSales(wkKey);
+    }
+  }
+
+  _swTransition(photId, restId, dayIdx, 'closed', { report });
 }
 
 // ─── SEARCH / FILTER ─────────────────────────────────────────────────────────
