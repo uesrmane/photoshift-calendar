@@ -1150,28 +1150,55 @@ function renderMyPortal(photId) {
       <div class="avail-toggle-grid">${availToggles}</div>
     </div>`;
 
-  // Shifts list
+  // Shifts list — all 7 days always shown
+  const _portalTodayRaw = new Date().getDay();
+  const _portalTodayIdx = _weekOffset === 0 ? (_portalTodayRaw === 0 ? 6 : _portalTodayRaw - 1) : -1;
+
   const shiftsHtml = allDays.map((dayName, i) => {
-    const shift = myShifts.find(s => s.dayName === dayName);
-    if (!shift) return '';
+    const shift   = myShifts.find(s => s.dayName === dayName);
+    const isToday = i === _portalTodayIdx;
+    const todayPill = isToday
+      ? `<span style="background:#6c63ff;color:white;font-size:0.58rem;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:5px;letter-spacing:0.3px;vertical-align:middle">TODAY</span>`
+      : '';
+
+    if (shift) {
+      const restObj = RESTAURANTS.find(r => r.name === shift.restaurant);
+      const restClick = restObj ? `openRestDrawer(${restObj.id})` : '';
+      const todayBg = isToday ? 'background:#ede9fe;box-shadow:0 0 0 1.5px #6c63ff33;' : '';
+      return `
+        <div class="shift-card" onclick="${restClick}"
+          style="cursor:pointer;${todayBg}transition:box-shadow 0.13s,transform 0.1s;"
+          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 14px rgba(0,0,0,0.09)'"
+          onmouseout="this.style.transform='';this.style.boxShadow='${isToday ? '0 0 0 1.5px #6c63ff33' : 'none'}'">
+          <div style="width:44px;flex-shrink:0">
+            <div class="shift-card-day" style="color:${isToday ? '#6c63ff' : p.color}">${shortDays[i]}${todayPill}</div>
+            <div style="font-size:0.65rem;color:var(--muted);margin-top:1px">${formatDayDate(i)}</div>
+          </div>
+          <div style="width:3px;height:36px;border-radius:2px;background:${isToday ? '#6c63ff' : p.color};flex-shrink:0"></div>
+          <div style="flex:1">
+            <div class="shift-card-rest">🍽️ ${shift.restaurant}</div>
+            <div class="shift-card-time">⏰ ${shift.start} – ${shift.end}</div>
+          </div>
+          <div style="color:var(--muted);font-size:1.1rem;opacity:0.45;flex-shrink:0;padding-left:4px">›</div>
+        </div>`;
+    }
+
+    // No shift assigned for this day
     return `
-      <div class="shift-card">
+      <div class="shift-card" style="background:${isToday ? '#f5f3ff' : 'var(--card2)'};${isToday ? 'box-shadow:0 0 0 1.5px #6c63ff22;' : ''}opacity:${isToday ? '1' : '0.65'}">
         <div style="width:44px;flex-shrink:0">
-          <div class="shift-card-day" style="color:${p.color}">${shortDays[i]}</div>
+          <div class="shift-card-day" style="color:${isToday ? '#6c63ff' : 'var(--muted)'}">${shortDays[i]}${todayPill}</div>
           <div style="font-size:0.65rem;color:var(--muted);margin-top:1px">${formatDayDate(i)}</div>
         </div>
-        <div style="width:3px;height:36px;border-radius:2px;background:${p.color};flex-shrink:0"></div>
-        <div>
-          <div class="shift-card-rest">🍽️ ${shift.restaurant}</div>
-          <div class="shift-card-time">⏰ ${shift.start} – ${shift.end}</div>
-        </div>
+        <div style="width:3px;height:36px;border-radius:2px;background:${isToday ? '#e0daff' : 'var(--border)'};flex-shrink:0"></div>
+        <div style="font-size:0.82rem;color:var(--muted);font-style:italic">No shift</div>
       </div>`;
   }).join('');
 
   const shiftsSection = `
     <div class="card">
       <div class="drawer-section-title" style="margin-bottom:12px">My Shifts This Week</div>
-      ${shiftsHtml || `<div style="color:var(--muted);font-size:0.82rem;padding:8px 0">No shifts assigned yet.</div>`}
+      ${shiftsHtml}
     </div>`;
 
   // Hero
@@ -1385,15 +1412,34 @@ function _renderPhotDrawer(id, openFormDay) {
   const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const restOptions = RESTAURANTS.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
 
-  const shiftsHtml = allDays.map((dayName, dayIdx) => {
-    const shift = myShifts.find(s => s.dayName === dayName);
-    const isAvail = p.avail[dayIdx] === 1 && p.status !== 'Inactive';
+  // Determine which day index is "today" — only meaningful for the current week
+  const _todayRaw = new Date().getDay(); // 0=Sun … 6=Sat
+  const _todayIdx = _weekOffset === 0 ? (_todayRaw === 0 ? 6 : _todayRaw - 1) : -1; // 0=Mon … 6=Sun, or -1
 
+  const _todayPill = `<span style="background:#6c63ff;color:white;font-size:0.58rem;font-weight:700;
+    padding:1px 6px;border-radius:10px;margin-left:6px;letter-spacing:0.3px;vertical-align:middle">TODAY</span>`;
+
+  const shiftsHtml = allDays.map((dayName, dayIdx) => {
+    const shift   = myShifts.find(s => s.dayName === dayName);
+    const isAvail = p.avail[dayIdx] === 1 && p.status !== 'Inactive';
+    const isToday = dayIdx === _todayIdx;
+
+    // ── Day label helper ─────────────────────────────────────────
+    const dayLabel = `
+      <div style="width:58px;flex-shrink:0">
+        <div style="font-size:0.72rem;font-weight:700;color:${shift ? p.color : isToday ? '#6c63ff' : 'var(--muted)'}">
+          ${dayName.slice(0,3)}${isToday ? _todayPill : ''}
+        </div>
+        <div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div>
+      </div>`;
+
+    // ── Assigned shift ───────────────────────────────────────────
     if (shift) {
-      // Assigned shift row with remove button
       return `
-        <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:#f5f3ff;border-left:3px solid ${p.color};margin-bottom:6px">
-          <div style="width:58px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:700;color:${p.color}">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
+        <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;
+          background:${isToday ? '#ede9fe' : '#f5f3ff'};border-left:3px solid ${p.color};margin-bottom:6px;
+          ${isToday ? 'box-shadow:0 0 0 1.5px #6c63ff33;' : ''}">
+          ${dayLabel}
           <div style="flex:1">
             <div style="font-size:0.82rem;font-weight:600;color:var(--text)">🍽️ ${shift.restaurant}</div>
             <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">⏰ ${shift.start} – ${shift.end}</div>
@@ -1404,20 +1450,23 @@ function _renderPhotDrawer(id, openFormDay) {
         </div>`;
     }
 
+    // ── Not available / inactive ─────────────────────────────────
     if (!isAvail) {
-      const label = p.status === 'Inactive' ? 'Inactive — cannot assign' : 'Not available';
+      const label = p.status === 'Inactive' ? 'Inactive' : 'Not available';
       return `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#fafafa;margin-bottom:6px;opacity:0.4">
-          <div style="width:58px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:600;color:var(--muted)">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;
+          background:${isToday ? '#f5f3ff' : 'var(--card2)'};margin-bottom:6px;
+          border-left:3px solid ${isToday ? '#e0daff' : 'transparent'}">
+          ${dayLabel}
           <div style="font-size:0.75rem;color:var(--muted);font-style:italic">${label}</div>
         </div>`;
     }
 
-    // Available — show assign button or inline form
+    // ── Inline assign form ───────────────────────────────────────
     if (openFormDay === dayName) {
       return `
         <div id="day-row-${dayIdx}" style="border:1.5px dashed #6c63ff;border-radius:10px;padding:12px;margin-bottom:6px;background:#faf9ff">
-          <div style="font-size:0.75rem;font-weight:700;color:#6c63ff;margin-bottom:10px">📅 Assign shift — ${dayName}</div>
+          <div style="font-size:0.75rem;font-weight:700;color:#6c63ff;margin-bottom:10px">📅 Assign shift — ${dayName}${isToday ? _todayPill : ''}</div>
           <div style="margin-bottom:8px">
             <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">Restaurant</label>
             <select id="form-rest-${dayIdx}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;background:white;color:var(--text);outline:none">
@@ -1449,10 +1498,12 @@ function _renderPhotDrawer(id, openFormDay) {
         </div>`;
     }
 
-    // Available — idle state with + button
+    // ── Available — idle ─────────────────────────────────────────
     return `
-      <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#f0fdf4;border-left:3px solid #22c98a;margin-bottom:6px">
-        <div style="width:58px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:700;color:#22c98a">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
+      <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;
+        background:${isToday ? '#f0fdf4' : 'var(--card2)'};border-left:3px solid #22c98a;margin-bottom:6px;
+        ${isToday ? 'box-shadow:0 0 0 1.5px #22c98a33;' : ''}">
+        ${dayLabel}
         <div style="flex:1;font-size:0.78rem;color:#22c98a;font-weight:500">Available</div>
         <button onclick="_renderPhotDrawer(${p.id},'${dayName}')"
           style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:#22c98a;color:white;border:none;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap">
@@ -1567,13 +1618,29 @@ function _renderRestDrawer(id, openFormDay) {
   const r = RESTAURANTS.find(x => x.id === id);
   const restShifts = WEEKLY_SHIFTS.filter(s => s.restaurant === r.name);
   const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-  // build color map dynamically so new photographers get their colour too
   const phColors = Object.fromEntries(PHOTOGRAPHERS.map(p => [p.name, p.color]));
+
+  const isManager = _currentRole === 'manager';
+  const myPhotName = !isManager ? (PHOTOGRAPHERS.find(p => p.id === _currentRole)?.name) : null;
 
   const weekHtml = allDays.map((dayName, dayIdx) => {
     const shift = restShifts.find(s => s.dayName === dayName);
 
-    // ── Day already has a shift ──────────────────────────────────────────────
+    // ── Photographer view: only show their own shift row ─────────────────────
+    if (!isManager) {
+      if (!shift || shift.photographer !== myPhotName) return ''; // skip days that aren't theirs
+      const col = phColors[shift.photographer] || '#6c63ff';
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:#f5f3ff;border-left:3px solid ${col};margin-bottom:6px">
+          <div style="width:70px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:700;color:${col}">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
+          <div style="flex:1">
+            <div style="font-size:0.82rem;font-weight:600;color:var(--text)">Your shift</div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">⏰ ${shift.start} – ${shift.end}</div>
+          </div>
+        </div>`;
+    }
+
+    // ── Manager view: day already has a shift ────────────────────────────────
     if (shift) {
       const col      = phColors[shift.photographer] || '#6c63ff';
       const initials = shift.photographer.split(' ').map(n => n[0]).join('');
@@ -1591,7 +1658,7 @@ function _renderRestDrawer(id, openFormDay) {
         </div>`;
     }
 
-    // ── Inline assign form ───────────────────────────────────────────────────
+    // ── Manager view: inline assign form ────────────────────────────────────
     const activePhoths = PHOTOGRAPHERS.filter(p => p.status !== 'Inactive');
     const photOptions  = activePhoths.map(p => {
       const avail = p.avail[dayIdx] === 1;
@@ -1633,7 +1700,7 @@ function _renderRestDrawer(id, openFormDay) {
         </div>`;
     }
 
-    // ── Open slot — show + Assign button ─────────────────────────────────────
+    // ── Manager view: open slot ──────────────────────────────────────────────
     return `
       <div id="day-row-${dayIdx}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#f0fdf4;border-left:3px solid #22c98a;margin-bottom:6px">
         <div style="width:70px;flex-shrink:0"><div style="font-size:0.72rem;font-weight:700;color:#22c98a">${dayName.slice(0,3)}</div><div style="font-size:0.65rem;color:var(--muted)">${formatDayDate(dayIdx)}</div></div>
@@ -1645,13 +1712,20 @@ function _renderRestDrawer(id, openFormDay) {
       </div>`;
   }).join('');
 
+  const shiftsTitle = isManager
+    ? `Shifts This Week (${restShifts.length} scheduled)`
+    : `Your Shift${weekHtml.trim() ? '' : 's'} at ${r.name}`;
+  const shiftsBody  = weekHtml.trim() || (isManager
+    ? ''
+    : `<div style="color:var(--muted);font-size:0.82rem;padding:4px 0">You have no shifts here this week.</div>`);
+
   const html = `
     <div style="font-size:2.2rem;margin-bottom:12px">🍽️</div>
     <div class="drawer-name">${r.name}</div>
     <div class="drawer-role" style="font-size:0.75rem">📍 ${r.address}</div>
     <div class="drawer-section">
-      <div class="drawer-section-title">Shifts This Week (${restShifts.length} scheduled)</div>
-      ${weekHtml}
+      <div class="drawer-section-title">${shiftsTitle}</div>
+      ${shiftsBody}
     </div>
     <div class="drawer-section">
       <div class="drawer-section-title">Supplies</div>
@@ -1718,34 +1792,40 @@ function removeShiftFromRest(restaurantName, dayName) {
 }
 
 function renderSupplyList(restId) {
-  const supplies = RESTAURANT_SUPPLIES[restId] || [];
+  const supplies  = RESTAURANT_SUPPLIES[restId] || [];
+  const canEdit   = _currentRole === 'manager';
+
   const rows = supplies.map((s, idx) => {
-    const isLow   = s.qty > 0 && s.qty <= s.low;
-    const isEmpty = s.qty === 0;
+    const isLow    = s.qty > 0 && s.qty <= s.low;
+    const isEmpty  = s.qty === 0;
     const tagClass = isEmpty ? 'badge-red' : isLow ? 'badge-yellow' : 'badge-green';
     const tagLabel = isEmpty ? 'Out' : isLow ? 'Low' : 'OK';
+    const removeBtn = canEdit
+      ? `<button onclick="removeSupplyItem(${restId},${idx})" title="Remove item"
+           style="border:none;background:none;cursor:pointer;color:#dc2626;font-size:0.95rem;padding:2px 4px;border-radius:4px;line-height:1;opacity:0.6"
+           onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">✕</button>`
+      : '';
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
       <span style="font-size:0.82rem;color:var(--text)">${s.item}</span>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span style="font-size:0.82rem;font-weight:600;color:var(--text)">${s.qty} <span style="font-weight:400;color:var(--muted);font-size:0.72rem">${s.unit}</span></span>
         <span class="badge ${tagClass}" style="font-size:0.65rem;padding:2px 7px">${tagLabel}</span>
-        <button onclick="removeSupplyItem(${restId},${idx})" title="Remove item"
-          style="border:none;background:none;cursor:pointer;color:#dc2626;font-size:0.95rem;padding:2px 4px;border-radius:4px;line-height:1;opacity:0.6"
-          onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">✕</button>
+        ${removeBtn}
       </div>
     </div>`;
   }).join('');
 
-  const addBtn = `<div style="margin-top:10px" id="supply-add-wrap-${restId}">
-    <button onclick="showSupplyForm(${restId})"
-      style="width:100%;padding:7px;background:var(--card2);border:1px dashed var(--border);border-radius:8px;font-size:0.78rem;color:var(--muted);cursor:pointer;">
-      + Add Supply Item
-    </button>
-  </div>`;
+  const emptyMsg = `<div style="color:var(--muted);font-size:0.8rem;padding:4px 0 8px">No supplies recorded</div>`;
+  const addBtn   = canEdit
+    ? `<div style="margin-top:10px" id="supply-add-wrap-${restId}">
+         <button onclick="showSupplyForm(${restId})"
+           style="width:100%;padding:7px;background:var(--card2);border:1px dashed var(--border);border-radius:8px;font-size:0.78rem;color:var(--muted);cursor:pointer;">
+           + Add Supply Item
+         </button>
+       </div>`
+    : '';
 
-  return (supplies.length === 0
-    ? `<div style="color:var(--muted);font-size:0.8rem;padding:4px 0 8px">No supplies recorded</div>`
-    : rows) + addBtn;
+  return (supplies.length === 0 ? emptyMsg : rows) + addBtn;
 }
 
 function showSupplyForm(restId) {
