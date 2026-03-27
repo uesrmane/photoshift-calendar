@@ -812,6 +812,84 @@ const WEEKLY_SHIFTS = [
   { day:6, dayName:"Sunday",    photographer:"Alex Rivera",   restaurant:"The Golden Fork",   start:"10:00", end:"14:00" },
 ];
 
+const RESTAURANT_SUPPLIES = {
+  1:  [ // The Golden Fork
+    { item:"Photo Frames (4×6)",    qty:24, unit:"pcs",   low:10 },
+    { item:"Printing Paper (Gloss)", qty:3,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:2,  unit:"pcs",   low:1  },
+    { item:"Ink Cartridge (Colour)", qty:1,  unit:"pcs",   low:2  },
+    { item:"Mounting Foam Board",    qty:8,  unit:"sheets", low:5 },
+  ],
+  2:  [ // Sakura Bites
+    { item:"Photo Frames (5×7)",    qty:12, unit:"pcs",   low:8  },
+    { item:"Printing Paper (Matte)", qty:2,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:3,  unit:"pcs",   low:1  },
+    { item:"Ink Cartridge (Colour)", qty:3,  unit:"pcs",   low:2  },
+  ],
+  3:  [ // Tuscan Sun
+    { item:"Photo Frames (4×6)",    qty:30, unit:"pcs",   low:10 },
+    { item:"Photo Frames (8×10)",   qty:6,  unit:"pcs",   low:4  },
+    { item:"Printing Paper (Gloss)", qty:5,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:4,  unit:"pcs",   low:1  },
+    { item:"Ink Cartridge (Colour)", qty:2,  unit:"pcs",   low:2  },
+    { item:"Laminate Pouches",       qty:50, unit:"pcs",   low:20 },
+  ],
+  4:  [ // Burger Palace
+    { item:"Photo Frames (4×6)",    qty:10, unit:"pcs",   low:10 },
+    { item:"Printing Paper (Matte)", qty:1,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:1,  unit:"pcs",   low:1  },
+  ],
+  5:  [ // Spice Route
+    { item:"Photo Frames (5×7)",    qty:18, unit:"pcs",   low:8  },
+    { item:"Printing Paper (Gloss)", qty:4,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:2,  unit:"pcs",   low:1  },
+    { item:"Ink Cartridge (Colour)", qty:2,  unit:"pcs",   low:2  },
+    { item:"Mounting Foam Board",    qty:4,  unit:"sheets", low:5 },
+  ],
+  6:  [ // Ocean Catch
+    { item:"Photo Frames (4×6)",    qty:20, unit:"pcs",   low:10 },
+    { item:"Printing Paper (Gloss)", qty:2,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:3,  unit:"pcs",   low:1  },
+    { item:"Ink Cartridge (Colour)", qty:4,  unit:"pcs",   low:2  },
+  ],
+  7:  [ // Green Garden
+    { item:"Photo Frames (4×6)",    qty:8,  unit:"pcs",   low:10 },
+    { item:"Printing Paper (Matte)", qty:1,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:0,  unit:"pcs",   low:1  },
+  ],
+  8:  [ // Casa Fiesta
+    { item:"Photo Frames (5×7)",    qty:22, unit:"pcs",   low:8  },
+    { item:"Photo Frames (8×10)",   qty:4,  unit:"pcs",   low:4  },
+    { item:"Printing Paper (Gloss)", qty:3,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:2,  unit:"pcs",   low:1  },
+    { item:"Ink Cartridge (Colour)", qty:1,  unit:"pcs",   low:2  },
+  ],
+  9:  [ // The Noodle Bar
+    { item:"Photo Frames (4×6)",    qty:5,  unit:"pcs",   low:10 },
+    { item:"Printing Paper (Matte)", qty:0,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:1,  unit:"pcs",   low:1  },
+  ],
+  10: [ // Steak & Stone
+    { item:"Photo Frames (8×10)",   qty:10, unit:"pcs",   low:4  },
+    { item:"Printing Paper (Gloss)", qty:3,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:2,  unit:"pcs",   low:1  },
+    { item:"Ink Cartridge (Colour)", qty:3,  unit:"pcs",   low:2  },
+    { item:"Laminate Pouches",       qty:30, unit:"pcs",   low:20 },
+  ],
+  11: [ // Café Lumière
+    { item:"Photo Frames (4×6)",    qty:14, unit:"pcs",   low:10 },
+    { item:"Printing Paper (Matte)", qty:2,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:1,  unit:"pcs",   low:1  },
+    { item:"Ink Cartridge (Colour)", qty:0,  unit:"pcs",   low:2  },
+  ],
+  12: [ // Harvest Table
+    { item:"Photo Frames (5×7)",    qty:16, unit:"pcs",   low:8  },
+    { item:"Printing Paper (Gloss)", qty:2,  unit:"reams", low:2  },
+    { item:"Ink Cartridge (Black)",  qty:2,  unit:"pcs",   low:1  },
+    { item:"Mounting Foam Board",    qty:6,  unit:"sheets", low:5 },
+  ],
+};
+
 const INVOICES = [
   { id:"INV-1042", restaurant:"The Golden Fork",  photographer:"Alex Rivera",   date:"Mar 20",  due:"Mar 30",  amount:820,  status:"Pending"  },
   { id:"INV-1041", restaurant:"Sakura Bites",      photographer:"Jordan Kim",    date:"Mar 18",  due:"Mar 28",  amount:640,  status:"Paid"     },
@@ -1257,7 +1335,99 @@ function openRestDrawer(id) {
       <div class="drawer-section-title">Shifts This Week (${restShifts.length} scheduled)</div>
       ${restShifts.length > 0 ? weekHtml : `<div style="color:var(--muted);font-size:0.8rem;padding:8px 0">No shifts scheduled this week</div>`}
     </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Supplies</div>
+      <div id="supply-list-${r.id}">${renderSupplyList(r.id)}</div>
+    </div>
   `);
+}
+
+function renderSupplyList(restId) {
+  const supplies = RESTAURANT_SUPPLIES[restId] || [];
+  const rows = supplies.map((s, idx) => {
+    const isLow   = s.qty > 0 && s.qty <= s.low;
+    const isEmpty = s.qty === 0;
+    const tagClass = isEmpty ? 'badge-red' : isLow ? 'badge-yellow' : 'badge-green';
+    const tagLabel = isEmpty ? 'Out' : isLow ? 'Low' : 'OK';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:0.82rem;color:var(--text)">${s.item}</span>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-size:0.82rem;font-weight:600;color:var(--text)">${s.qty} <span style="font-weight:400;color:var(--muted);font-size:0.72rem">${s.unit}</span></span>
+        <span class="badge ${tagClass}" style="font-size:0.65rem;padding:2px 7px">${tagLabel}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const addBtn = `<div style="margin-top:10px" id="supply-add-wrap-${restId}">
+    <button onclick="showSupplyForm(${restId})"
+      style="width:100%;padding:7px;background:var(--card2);border:1px dashed var(--border);border-radius:8px;font-size:0.78rem;color:var(--muted);cursor:pointer;">
+      + Add Supply Item
+    </button>
+  </div>`;
+
+  return (supplies.length === 0
+    ? `<div style="color:var(--muted);font-size:0.8rem;padding:4px 0 8px">No supplies recorded</div>`
+    : rows) + addBtn;
+}
+
+function showSupplyForm(restId) {
+  document.getElementById(`supply-add-wrap-${restId}`).innerHTML = `
+    <div style="border:1.5px dashed var(--accent);border-radius:10px;padding:12px;margin-top:2px;background:#faf9ff;">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.4px">New Supply Item</div>
+      <div style="margin-bottom:8px">
+        <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">Item name</label>
+        <input id="si-name-${restId}" type="text" placeholder="e.g. Printing Paper (Gloss)"
+          style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;color:var(--text);outline:none;background:white;"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">Quantity</label>
+          <input id="si-qty-${restId}" type="number" min="0" value="0" placeholder="0"
+            style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;color:var(--text);outline:none;background:white;"/>
+        </div>
+        <div>
+          <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">Unit</label>
+          <select id="si-unit-${restId}"
+            style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;color:var(--text);outline:none;background:white;">
+            <option>pcs</option>
+            <option>reams</option>
+            <option>sheets</option>
+            <option>boxes</option>
+            <option>rolls</option>
+            <option>sets</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:3px">Low alert</label>
+          <input id="si-low-${restId}" type="number" min="0" value="2" placeholder="2"
+            style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);font-size:0.82rem;color:var(--text);outline:none;background:white;"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="saveSupplyItem(${restId})"
+          style="flex:1;padding:7px;background:var(--accent);color:white;border:none;border-radius:7px;font-size:0.82rem;font-weight:600;cursor:pointer;">
+          ✓ Save Item
+        </button>
+        <button onclick="document.getElementById('supply-list-${restId}').innerHTML=renderSupplyList(${restId})"
+          style="padding:7px 14px;background:var(--card2);color:var(--muted);border:none;border-radius:7px;font-size:0.82rem;cursor:pointer;">
+          Cancel
+        </button>
+      </div>
+    </div>`;
+}
+
+function saveSupplyItem(restId) {
+  const name = document.getElementById(`si-name-${restId}`).value.trim();
+  const qty  = parseInt(document.getElementById(`si-qty-${restId}`).value) || 0;
+  const unit = document.getElementById(`si-unit-${restId}`).value;
+  const low  = parseInt(document.getElementById(`si-low-${restId}`).value) || 1;
+  if (!name) {
+    document.getElementById(`si-name-${restId}`).style.borderColor = '#dc2626';
+    return;
+  }
+  if (!RESTAURANT_SUPPLIES[restId]) RESTAURANT_SUPPLIES[restId] = [];
+  RESTAURANT_SUPPLIES[restId].push({ item: name, qty, unit, low });
+  document.getElementById(`supply-list-${restId}`).innerHTML = renderSupplyList(restId);
 }
 
 function openInvDrawer(id) {
