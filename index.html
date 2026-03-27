@@ -105,6 +105,51 @@
     }
     .manager-name { font-size: 0.8rem; font-weight: 600; color: var(--text); }
 
+    /* ── ROLE SWITCHER ── */
+    .role-switcher {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .role-switcher-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .role-select {
+      width: 100%; padding: 7px 10px;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.78rem; color: var(--text);
+      background: var(--card2); cursor: pointer; outline: none;
+    }
+    .role-select:focus { border-color: var(--accent); }
+
+    /* ── PHOTOGRAPHER PORTAL ── */
+    .portal-hero {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px 24px; margin-bottom: 20px;
+    }
+    .portal-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 700; flex-shrink: 0;
+    }
+    .portal-name { font-size: 1.2rem; font-weight: 700; }
+    .portal-role { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .avail-toggle-grid { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .avail-toggle {
+      padding: 6px 12px; border-radius: 8px; border: 1.5px solid var(--border);
+      font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      transition: all 0.15s; background: var(--card2); color: var(--muted);
+    }
+    .avail-toggle.on { background: #dcfce7; border-color: #22c98a; color: #15803d; }
+    .shift-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .shift-card-day { width: 36px; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; }
+    .shift-card-rest { font-size: 0.85rem; font-weight: 600; }
+    .shift-card-time { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
     /* ── BOTTOM NAV (mobile only) ── */
     .bottom-nav {
       display: none;
@@ -481,7 +526,7 @@
       <div class="brand-sub">Manager Portal</div>
     </div>
   </div>
-  <nav class="nav">
+  <nav class="nav" id="manager-nav">
     <button class="nav-item active" onclick="showSection('photographers')">
       <span class="nav-icon">👥</span>
       <span>Photographers</span>
@@ -491,13 +536,25 @@
       <span>Restaurants</span>
     </button>
   </nav>
+  <nav class="nav" id="photographer-nav" style="display:none">
+    <button class="nav-item active" onclick="showSection('my-portal')">
+      <span class="nav-icon">📅</span>
+      <span>My Shifts</span>
+    </button>
+  </nav>
   <div class="sidebar-footer">
     <div class="manager-pill">
-      <div class="manager-avatar">MG</div>
+      <div class="manager-avatar" id="sidebar-avatar">MG</div>
       <div>
-        <div class="manager-name">Morgan G.</div>
-        <div>Manager</div>
+        <div class="manager-name" id="sidebar-name">Morgan G.</div>
+        <div id="sidebar-role-label">Manager</div>
       </div>
+    </div>
+    <div class="role-switcher">
+      <div class="role-switcher-label">View as</div>
+      <select class="role-select" id="role-select" onchange="switchRole(this.value)">
+        <option value="manager">👔 Manager</option>
+      </select>
     </div>
   </div>
 </aside>
@@ -594,19 +651,31 @@
   </div>
 
 
+  <!-- ══ PHOTOGRAPHER PORTAL ══ -->
+  <div class="section" id="section-my-portal">
+    <div id="portal-content"></div>
+  </div>
+
 </main>
 
 <!-- BOTTOM NAV (mobile) -->
 <nav class="bottom-nav" id="bottom-nav">
-  <button class="bottom-nav-item active" onclick="showSection('photographers', this)" id="bn-photographers">
+  <!-- Manager items -->
+  <button class="bottom-nav-item active bn-manager" onclick="showSection('photographers', this)" id="bn-photographers">
     <div class="bn-icon-bg"></div>
     <span class="bn-icon">👥</span>
     <span>Photographers</span>
   </button>
-  <button class="bottom-nav-item" onclick="showSection('restaurants', this)" id="bn-restaurants">
+  <button class="bottom-nav-item bn-manager" onclick="showSection('restaurants', this)" id="bn-restaurants">
     <div class="bn-icon-bg"></div>
     <span class="bn-icon">🍽️</span>
     <span>Restaurants</span>
+  </button>
+  <!-- Photographer item (hidden by default) -->
+  <button class="bottom-nav-item bn-photographer" onclick="showSection('my-portal', this)" id="bn-my-portal" style="display:none">
+    <div class="bn-icon-bg"></div>
+    <span class="bn-icon">📅</span>
+    <span>My Shifts</span>
   </button>
 </nav>
 
@@ -745,9 +814,139 @@ const RESTAURANT_SUPPLIES = {
   ],
 };
 
+// ─── ROLE SWITCHER ───────────────────────────────────────────────────────────
+
+let _currentRole = 'manager'; // 'manager' | photographer id (number)
+
+function initRoleSelect() {
+  const sel = document.getElementById('role-select');
+  PHOTOGRAPHERS.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `📷 ${p.name}`;
+    sel.appendChild(opt);
+  });
+}
+
+function switchRole(val) {
+  _currentRole = val === 'manager' ? 'manager' : parseInt(val);
+  const isManager = _currentRole === 'manager';
+
+  // toggle navs
+  document.getElementById('manager-nav').style.display    = isManager ? '' : 'none';
+  document.getElementById('photographer-nav').style.display = isManager ? 'none' : '';
+
+  // toggle bottom nav items
+  document.querySelectorAll('.bn-manager').forEach(el => el.style.display = isManager ? '' : 'none');
+  document.querySelectorAll('.bn-photographer').forEach(el => el.style.display = isManager ? 'none' : '');
+
+  // update sidebar avatar/name/role
+  if (isManager) {
+    document.getElementById('sidebar-avatar').textContent      = 'MG';
+    document.getElementById('sidebar-avatar').style.background = 'linear-gradient(135deg,#6c63ff,#a49dff)';
+    document.getElementById('sidebar-name').textContent        = 'Morgan G.';
+    document.getElementById('sidebar-role-label').textContent  = 'Manager';
+  } else {
+    const p = PHOTOGRAPHERS.find(x => x.id === _currentRole);
+    document.getElementById('sidebar-avatar').textContent      = p.initials;
+    document.getElementById('sidebar-avatar').style.background = p.color + '33';
+    document.getElementById('sidebar-avatar').style.color      = p.color;
+    document.getElementById('sidebar-name').textContent        = p.name.split(' ')[0] + ' ' + p.name.split(' ')[1][0] + '.';
+    document.getElementById('sidebar-role-label').textContent  = 'Photographer';
+  }
+
+  if (isManager) {
+    showSection('photographers');
+  } else {
+    renderMyPortal(_currentRole);
+    showSection('my-portal');
+  }
+}
+
+// ─── PHOTOGRAPHER PORTAL ─────────────────────────────────────────────────────
+
+function renderMyPortal(photId) {
+  const p = PHOTOGRAPHERS.find(x => x.id === photId);
+  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const shortDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  const myShifts = WEEKLY_SHIFTS.filter(s => s.photographer === p.name);
+
+  // KPI cards
+  const availCount  = p.avail.filter(v => v === 1).length;
+  const shiftCount  = myShifts.length;
+  const salesDisplay = p.sales > 0 ? '$' + p.sales.toLocaleString() : '—';
+
+  const kpis = `
+    <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi-card c1"><div class="kpi-label">Shifts This Week</div><div class="kpi-value">${shiftCount}</div><div class="kpi-sub">assigned to you</div></div>
+      <div class="kpi-card c2"><div class="kpi-label">Available Days</div><div class="kpi-value">${availCount}</div><div class="kpi-sub">this week</div></div>
+      <div class="kpi-card c3"><div class="kpi-label">Sales Last Week</div><div class="kpi-value" style="font-size:1.4rem">${salesDisplay}</div><div class="kpi-sub">your contribution</div></div>
+    </div>`;
+
+  // Availability editor
+  const availToggles = shortDays.map((d, i) => `
+    <button class="avail-toggle ${p.avail[i] ? 'on' : ''}" onclick="toggleAvail(${photId},${i})" id="avail-btn-${photId}-${i}">
+      ${d}
+    </button>`).join('');
+
+  const availSection = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="drawer-section-title" style="margin-bottom:12px">My Availability</div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:12px">Tap a day to toggle your availability for this week.</p>
+      <div class="avail-toggle-grid">${availToggles}</div>
+    </div>`;
+
+  // Shifts list
+  const shiftsHtml = allDays.map((dayName, i) => {
+    const shift = myShifts.find(s => s.dayName === dayName);
+    if (!shift) return '';
+    return `
+      <div class="shift-card">
+        <div class="shift-card-day" style="color:${p.color}">${shortDays[i]}</div>
+        <div style="width:3px;height:36px;border-radius:2px;background:${p.color};flex-shrink:0"></div>
+        <div>
+          <div class="shift-card-rest">🍽️ ${shift.restaurant}</div>
+          <div class="shift-card-time">⏰ ${shift.start} – ${shift.end}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const shiftsSection = `
+    <div class="card">
+      <div class="drawer-section-title" style="margin-bottom:12px">My Shifts This Week</div>
+      ${shiftsHtml || `<div style="color:var(--muted);font-size:0.82rem;padding:8px 0">No shifts assigned yet.</div>`}
+    </div>`;
+
+  // Hero
+  const statusBadge = p.status === 'Inactive'
+    ? `<span class="badge badge-red" style="margin-left:8px;font-size:0.7rem">Inactive</span>`
+    : `<span class="badge badge-green" style="margin-left:8px;font-size:0.7rem">Active</span>`;
+
+  const hero = `
+    <div class="portal-hero">
+      <div class="portal-avatar" style="background:${p.color}22;color:${p.color}">${p.initials}</div>
+      <div>
+        <div class="portal-name">${p.name}${statusBadge}</div>
+        <div class="portal-role">${p.email} · ${p.phone}</div>
+      </div>
+    </div>`;
+
+  document.getElementById('portal-content').innerHTML = hero + kpis + availSection + shiftsSection;
+}
+
+function toggleAvail(photId, dayIdx) {
+  const p = PHOTOGRAPHERS.find(x => x.id === photId);
+  p.avail[dayIdx] = p.avail[dayIdx] === 1 ? 0 : 1;
+  const btn = document.getElementById(`avail-btn-${photId}-${dayIdx}`);
+  btn.classList.toggle('on', p.avail[dayIdx] === 1);
+  // re-render the availability grid in manager's drawer if it's open
+  if (_drawerPhotId === photId) _renderPhotDrawer(photId, null);
+}
+
 // ─── SECTION NAV ────────────────────────────────────────────────────────────
 
-const SECTION_TITLES = { photographers:'Photographers', restaurants:'Restaurants' };
+const SECTION_TITLES = { photographers:'Photographers', restaurants:'Restaurants', 'my-portal':'My Shifts' };
 
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1344,6 +1543,7 @@ function filterByStatus(tableId, status) {
 // ─── INIT ────────────────────────────────────────────────────────────────────
 renderPhotographers();
 renderRestaurants();
+initRoleSelect();
 
 // ─── ADD PHOTOGRAPHER MODAL ─────────────────────────────────────────────────
 
