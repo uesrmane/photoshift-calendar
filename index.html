@@ -601,12 +601,12 @@
   <button class="bottom-nav-item active" onclick="showSection('photographers', this)" id="bn-photographers">
     <div class="bn-icon-bg"></div>
     <span class="bn-icon">👥</span>
-    <span>Team</span>
+    <span>Photographers</span>
   </button>
   <button class="bottom-nav-item" onclick="showSection('restaurants', this)" id="bn-restaurants">
     <div class="bn-icon-bg"></div>
     <span class="bn-icon">🍽️</span>
-    <span>Places</span>
+    <span>Restaurants</span>
   </button>
 </nav>
 
@@ -1239,6 +1239,9 @@ function renderSupplyList(restId) {
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span style="font-size:0.82rem;font-weight:600;color:var(--text)">${s.qty} <span style="font-weight:400;color:var(--muted);font-size:0.72rem">${s.unit}</span></span>
         <span class="badge ${tagClass}" style="font-size:0.65rem;padding:2px 7px">${tagLabel}</span>
+        <button onclick="removeSupplyItem(${restId},${idx})" title="Remove item"
+          style="border:none;background:none;cursor:pointer;color:#dc2626;font-size:0.95rem;padding:2px 4px;border-radius:4px;line-height:1;opacity:0.6"
+          onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -1312,6 +1315,12 @@ function saveSupplyItem(restId) {
   }
   if (!RESTAURANT_SUPPLIES[restId]) RESTAURANT_SUPPLIES[restId] = [];
   RESTAURANT_SUPPLIES[restId].push({ item: name, qty, unit, low });
+  document.getElementById(`supply-list-${restId}`).innerHTML = renderSupplyList(restId);
+}
+
+function removeSupplyItem(restId, idx) {
+  if (!RESTAURANT_SUPPLIES[restId]) return;
+  RESTAURANT_SUPPLIES[restId].splice(idx, 1);
   document.getElementById(`supply-list-${restId}`).innerHTML = renderSupplyList(restId);
 }
 
