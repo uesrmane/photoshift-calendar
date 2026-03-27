@@ -518,6 +518,7 @@
       <div class="kpi-card c1"><div class="kpi-label">Total</div><div class="kpi-value">8</div><div class="kpi-sub">on the team</div></div>
       <div class="kpi-card c2"><div class="kpi-label">Active This Week</div><div class="kpi-value">6</div><div class="kpi-sub">assigned to shifts</div></div>
       <div class="kpi-card c3"><div class="kpi-label">Shifts This Week</div><div class="kpi-value">22</div><div class="kpi-sub">across all photographers</div></div>
+      <div class="kpi-card c4"><div class="kpi-label">Open Slots</div><div class="kpi-value" id="kpi-open-slots">—</div><div class="kpi-sub">need filling this week</div></div>
     </div>
     <div class="card">
       <div class="toolbar">
@@ -556,6 +557,11 @@
       <div class="kpi-card c1"><div class="kpi-label">Total</div><div class="kpi-value">12</div><div class="kpi-sub">locations</div></div>
       <div class="kpi-card c2"><div class="kpi-label">Fully Covered</div><div class="kpi-value">8</div><div class="kpi-sub">this week</div></div>
       <div class="kpi-card c3"><div class="kpi-label">Needs Coverage</div><div class="kpi-value">4</div><div class="kpi-sub">unassigned slots</div></div>
+      <div class="kpi-card c4">
+        <div class="kpi-label">Top Sales</div>
+        <div class="kpi-value" id="kpi-top-rest-sales" style="font-size:1.35rem">—</div>
+        <div class="kpi-sub" id="kpi-top-rest-name">this week</div>
+      </div>
     </div>
     <div class="card">
       <div class="toolbar">
@@ -762,6 +768,38 @@ function showSection(id) {
 
 // ─── RENDER TABLES ───────────────────────────────────────────────────────────
 
+function computeRestSales(restName) {
+  const phNames = [...new Set(WEEKLY_SHIFTS.filter(s => s.restaurant === restName).map(s => s.photographer))];
+  let total = 0;
+  phNames.forEach(name => {
+    const ph = PHOTOGRAPHERS.find(p => p.name === name);
+    if (!ph || ph.sales === 0) return;
+    const totalShifts = WEEKLY_SHIFTS.filter(s => s.photographer === name).length;
+    const restShifts  = WEEKLY_SHIFTS.filter(s => s.photographer === name && s.restaurant === restName).length;
+    if (totalShifts > 0) total += Math.round(ph.sales * restShifts / totalShifts);
+  });
+  return total;
+}
+
+function updateTopRestKPI() {
+  const salesEl = document.getElementById('kpi-top-rest-sales');
+  const nameEl  = document.getElementById('kpi-top-rest-name');
+  if (!salesEl || !nameEl) return;
+  const ranked = RESTAURANTS.map(r => ({ ...r, computed: computeRestSales(r.name) }))
+                             .sort((a, b) => b.computed - a.computed);
+  const top = ranked[0];
+  salesEl.textContent = top && top.computed > 0 ? '$' + top.computed.toLocaleString() : '—';
+  nameEl.textContent  = top && top.computed > 0 ? top.name : 'no shifts yet';
+}
+
+function updateOpenSlotsKPI() {
+  const el = document.getElementById('kpi-open-slots');
+  if (!el) return;
+  const totalSlots = RESTAURANTS.length * 7;
+  const filled     = WEEKLY_SHIFTS.length;
+  el.textContent   = Math.max(0, totalSlots - filled);
+}
+
 function renderPhotographers() {
   const days = ['M','T','W','T','F','S','S'];
   const sorted = [...PHOTOGRAPHERS].sort((a, b) => b.sales - a.sales);
@@ -795,6 +833,7 @@ function renderPhotographers() {
       <td class="hide-mobile">${availDots}</td>
     </tr>`;
   }).join('');
+  updateOpenSlotsKPI();
 }
 
 function renderRestaurants() {
@@ -821,6 +860,8 @@ function renderRestaurants() {
       <td><span class="badge ${cvgClass}">${coverage}</span></td>
     </tr>`;
   }).join('');
+  updateOpenSlotsKPI();
+  updateTopRestKPI();
 }
 
 // ─── DRAWERS ─────────────────────────────────────────────────────────────────
