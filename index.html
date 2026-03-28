@@ -2286,60 +2286,131 @@ function _renderShiftWorkflow(photId, restId, dayIdx) {
         onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save & Go to Report →</button>`;
 
   } else if (status === 'reporting') {
-    const saved  = wf.report || {};
-    const salesVal   = saved.sales   !== undefined ? saved.sales   : '';
-    const notePub    = saved.notePub  !== undefined ? saved.notePub  : '';
-    const notePriv   = saved.notePriv !== undefined ? saved.notePriv : '';
-    const noteVis    = saved.noteVis  || 'public';
-    const photoName  = saved.photoName || '';
+    const saved = wf.report || {};
+    const r = (key, def='') => saved[key] !== undefined ? saved[key] : def;
+    const noteVis   = r('noteVis', 'public');
+    const photoName = r('photoName', '');
+    const todayD = new Date();
+    const autoDate = r('date', String(todayD.getDate()).padStart(2,'0') + '.' + String(todayD.getMonth()+1).padStart(2,'0'));
+
+    // 2-column number field helper
+    const nf = (id, label, val) => `
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:0.62rem;color:var(--muted);font-weight:700;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label} <span style="color:#ff6584">*</span></label>
+        <input type="number" id="${id}" value="${val}" min="0" placeholder="0"
+          style="border:1px solid var(--border);border-radius:7px;padding:7px 8px;font-size:0.88rem;background:white;width:100%"
+          oninput="_swAutoTotal()">
+      </div>`;
 
     body = `
-      <div style="font-weight:600;font-size:0.88rem;margin-bottom:14px">Sales Report</div>
-      <div style="margin-bottom:14px">
-        <label style="font-size:0.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">SALES AMOUNT ($)</label>
-        <input type="number" id="sw-sales" value="${salesVal}" min="0" placeholder="e.g. 1200"
-          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:0.92rem;background:white">
+      <div style="font-weight:700;font-size:0.92rem;margin-bottom:12px">Sales Report</div>
+
+      <div style="background:#f8f7ff;border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid #ede9ff">
+        <div style="font-size:0.62rem;color:#6c63ff;font-weight:700;margin-bottom:10px;text-transform:uppercase">Shift Info</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label style="font-size:0.62rem;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">DATE <span style="color:#ff6584">*</span></label>
+            <input type="text" id="sw-date" value="${autoDate}" placeholder="DD.MM"
+              style="width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 8px;font-size:0.88rem;background:white">
+          </div>
+          <div>
+            <label style="font-size:0.62rem;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">NAME <span style="color:#ff6584">*</span></label>
+            <input type="text" id="sw-name" value="${r('name', phot.name||'')}"
+              style="width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 8px;font-size:0.88rem;background:white">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.62rem;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">LOCATION <span style="color:#ff6584">*</span></label>
+          <input type="text" id="sw-location" value="${r('location', rest.name||'')}"
+            style="width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 8px;font-size:0.88rem;background:white">
+        </div>
       </div>
-      <div style="margin-bottom:14px">
-        <label style="font-size:0.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">ATTACH PHOTO (optional)</label>
+
+      <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:10px;text-transform:uppercase">Sales</div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:0.62rem;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">TOTAL <span style="color:#ff6584">*</span></label>
+          <input type="number" id="sw-total" value="${r('total','')}" min="0" placeholder="0"
+            style="width:100%;border:1.5px solid #6c63ff33;border-radius:7px;padding:8px 12px;font-size:1rem;font-weight:700;background:white;color:var(--text)"
+            oninput="_swAutoTotal()">
+          <div style="font-size:0.62rem;color:var(--muted);margin-top:3px">Auto-calculated from Cash + C.C. sale + Square sale</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          ${nf('sw-cash',       'Cash',       r('cash',''))}
+          ${nf('sw-cashleft',   'Cash left',  r('cashleft',''))}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          ${nf('sw-ccsale',     'C.c. sale',  r('ccsale',''))}
+          ${nf('sw-cctip',      'C.c. tip',   r('cctip',''))}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          ${nf('sw-sqsale',     'Square sale', r('sqsale',''))}
+          ${nf('sw-sqtip',      'Square tip',  r('sqtip',''))}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${nf('sw-commission', 'Commission',  r('commission',''))}
+          <div></div>
+        </div>
+      </div>
+
+      <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:10px;text-transform:uppercase">Counters</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          ${nf('sw-framesstart', 'Frames start', r('framesstart',''))}
+          ${nf('sw-framesleft',  'Frames left',  r('framesleft',''))}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          ${nf('sw-ribstart', 'Rib/paper start', r('ribstart',''))}
+          ${nf('sw-ribleft',  'Rib/paper left',  r('ribleft',''))}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${nf('sw-lcstart', 'Live counter start', r('lcstart',''))}
+          ${nf('sw-lcleft',  'Live counter left',  r('lcleft',''))}
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <label style="font-size:0.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">ATTACH PHOTO (optional)</label>
         <div id="sw-photo-preview" style="margin-bottom:6px;${photoName ? '' : 'display:none'}">
           <div style="background:#ede9ff;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#6c63ff;display:flex;align-items:center;gap:8px">
             <span>📎</span><span id="sw-photo-name">${photoName}</span>
-            <button onclick="document.getElementById('sw-photo-name').textContent='';document.getElementById('sw-photo-preview').style.display='none';document.getElementById('sw-photo-input').value='';_swClearPhoto(${photId},${dayIdx})"
+            <button onclick="document.getElementById('sw-photo-name').textContent='';document.getElementById('sw-photo-preview').style.display='none';document.getElementById('sw-photo-input').value=''"
               style="margin-left:auto;background:none;border:none;cursor:pointer;color:#ff6584;font-size:0.85rem">✕</button>
           </div>
         </div>
         <label for="sw-photo-input" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--card2);border:1.5px dashed var(--border);border-radius:8px;padding:10px 14px;font-size:0.82rem;color:var(--muted);transition:border-color 0.15s"
           onmouseover="this.style.borderColor='#6c63ff'" onmouseout="this.style.borderColor='var(--border)'">
-          <span style="font-size:1.2rem">📷</span> Click to attach a photo from your device
+          <span style="font-size:1.2rem">📷</span> Click to attach a photo
         </label>
         <input type="file" id="sw-photo-input" accept="image/*" style="display:none"
           onchange="_swPreviewPhoto(${photId},${dayIdx},this)">
       </div>
-      <div style="margin-bottom:14px">
-        <label style="font-size:0.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">NOTE (optional)</label>
+
+      <div style="margin-bottom:16px">
+        <label style="font-size:0.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">COMMENT (optional)</label>
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <button id="sw-note-pub-btn" onclick="_swSetNoteVis('public')"
-            style="flex:1;border-radius:7px;padding:6px 0;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid ${noteVis==='public' ? '#6c63ff' : 'var(--border)'};background:${noteVis==='public' ? '#ede9ff' : 'white'};color:${noteVis==='public' ? '#6c63ff' : 'var(--muted)'}">
+            style="flex:1;border-radius:7px;padding:6px 0;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid ${noteVis==='public'?'#6c63ff':'var(--border)'};background:${noteVis==='public'?'#ede9ff':'white'};color:${noteVis==='public'?'#6c63ff':'var(--muted)'}">
             🌐 Public
           </button>
           <button id="sw-note-priv-btn" onclick="_swSetNoteVis('private')"
-            style="flex:1;border-radius:7px;padding:6px 0;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid ${noteVis==='private' ? '#6c63ff' : 'var(--border)'};background:${noteVis==='private' ? '#ede9ff' : 'white'};color:${noteVis==='private' ? '#6c63ff' : 'var(--muted)'}">
+            style="flex:1;border-radius:7px;padding:6px 0;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid ${noteVis==='private'?'#6c63ff':'var(--border)'};background:${noteVis==='private'?'#ede9ff':'white'};color:${noteVis==='private'?'#6c63ff':'var(--muted)'}">
             🔒 Private
           </button>
         </div>
-        <div style="font-size:0.7rem;color:var(--muted);margin-bottom:6px">${noteVis === 'public' ? 'Visible to the restaurant manager.' : 'Only visible to your own manager.'}</div>
-        <textarea id="sw-note" rows="3" placeholder="Add a note about the shift…"
-          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:0.82rem;resize:vertical;background:white">${noteVis === 'public' ? notePub : notePriv}</textarea>
+        <div id="sw-note-hint" style="font-size:0.7rem;color:var(--muted);margin-bottom:6px">${noteVis==='public'?'Visible to the restaurant manager.':'Only visible to your own manager.'}</div>
+        <textarea id="sw-note" rows="3" placeholder="Add a comment about the shift…"
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:0.82rem;resize:vertical;background:white">${noteVis==='public'?r('notePub',''):r('notePriv','')}</textarea>
       </div>
+
       <button onclick="_swSubmitReport(${photId},${restId},${dayIdx})"
-        style="background:#22c98a;color:white;border:none;border-radius:10px;padding:11px 0;width:100%;font-size:0.92rem;font-weight:700;cursor:pointer;transition:opacity 0.15s;margin-top:4px"
+        style="background:#22c98a;color:white;border:none;border-radius:10px;padding:11px 0;width:100%;font-size:0.92rem;font-weight:700;cursor:pointer;transition:opacity 0.15s"
         onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">✓ Close Shift</button>`;
 
   } else if (status === 'closed') {
-    const rep   = wf.report || {};
-    const oi    = wf.openInv  || {};
-    const ci    = wf.closeInv || {};
+    const rep = wf.report || {};
+    const oi  = wf.openInv  || {};
+    const ci  = wf.closeInv || {};
     const supplies = RESTAURANT_SUPPLIES[restId] || [];
     const invRows  = supplies.map((s, idx) => {
       const o = oi[idx] !== undefined ? oi[idx] : s.qty;
@@ -2351,27 +2422,66 @@ function _renderShiftWorkflow(photId, restId, dayIdx) {
         <span>${s.item}</span>
         <span style="color:var(--muted)">${o} → ${c} <strong style="color:${dCol}">(${dStr})</strong></span>
       </div>`;
-    }).join('') || '<div style="color:var(--muted);font-size:0.78rem">No items.</div>';
+    }).join('') || '<div style="color:var(--muted);font-size:0.78rem">No supply items recorded.</div>';
+
+    const sv = (val, unit='') => (val !== '' && val !== undefined && val !== null)
+      ? `<strong>${val}${unit ? ' '+unit : ''}</strong>`
+      : `<span style="color:var(--muted)">—</span>`;
+
+    const row2 = (l1, v1, l2, v2) => `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:0.62rem;color:var(--muted);font-weight:600">${l1}</div><div style="font-size:0.82rem;margin-top:1px">${v1}</div></div>
+        <div><div style="font-size:0.62rem;color:var(--muted);font-weight:600">${l2}</div><div style="font-size:0.82rem;margin-top:1px">${v2}</div></div>
+      </div>`;
 
     body = `
-      <div style="text-align:center;padding:10px 0 16px">
-        <div style="font-size:2.4rem;margin-bottom:8px">✅</div>
-        <div style="font-weight:700;font-size:1rem;color:#22c98a;margin-bottom:4px">Shift Closed</div>
-        <div style="color:var(--muted);font-size:0.8rem">All data has been saved.</div>
+      <div style="text-align:center;padding:8px 0 14px">
+        <div style="font-size:2.2rem;margin-bottom:6px">✅</div>
+        <div style="font-weight:700;font-size:1rem;color:#22c98a;margin-bottom:2px">Shift Closed</div>
+        <div style="color:var(--muted);font-size:0.78rem">All data saved.</div>
       </div>
-      <div style="background:var(--card2);border-radius:10px;padding:14px;margin-bottom:12px">
-        <div style="font-size:0.7rem;color:var(--muted);font-weight:700;margin-bottom:8px">SALES</div>
-        <div style="font-size:1.4rem;font-weight:800;color:var(--text)">${rep.sales > 0 ? '$' + (+rep.sales).toLocaleString() : '—'}</div>
+
+      <div style="background:#f8f7ff;border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid #ede9ff">
+        <div style="font-size:0.62rem;color:#6c63ff;font-weight:700;margin-bottom:8px;text-transform:uppercase">Shift Info</div>
+        ${row2('DATE', sv(rep.date), 'NAME', sv(rep.name))}
+        <div style="padding:4px 0">
+          <div style="font-size:0.62rem;color:var(--muted);font-weight:600">LOCATION</div>
+          <div style="font-size:0.82rem;margin-top:1px">${sv(rep.location)}</div>
+        </div>
       </div>
-      <div style="background:var(--card2);border-radius:10px;padding:14px;margin-bottom:12px">
-        <div style="font-size:0.7rem;color:var(--muted);font-weight:700;margin-bottom:8px">INVENTORY CHANGES</div>
+
+      <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:10px">
+        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Sales</div>
+        <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+          <div style="font-size:0.62rem;color:var(--muted);font-weight:600">TOTAL</div>
+          <div style="font-size:1.3rem;font-weight:800;color:var(--text);margin-top:2px">${rep.total !== '' && rep.total !== undefined ? '$' + Number(rep.total).toLocaleString() : '—'}</div>
+        </div>
+        ${row2('CASH', sv(rep.cash,''), 'CASH LEFT', sv(rep.cashleft,''))}
+        ${row2('C.C. SALE', sv(rep.ccsale,''), 'C.C. TIP', sv(rep.cctip,''))}
+        ${row2('SQUARE SALE', sv(rep.sqsale,''), 'SQUARE TIP', sv(rep.sqtip,''))}
+        <div style="padding:4px 0">
+          <div style="font-size:0.62rem;color:var(--muted);font-weight:600">COMMISSION</div>
+          <div style="font-size:0.82rem;margin-top:1px">${sv(rep.commission,'')}</div>
+        </div>
+      </div>
+
+      <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:10px">
+        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Counters</div>
+        ${row2('FRAMES START', sv(rep.framesstart), 'FRAMES LEFT', sv(rep.framesleft))}
+        ${row2('RIB/PAPER START', sv(rep.ribstart), 'RIB/PAPER LEFT', sv(rep.ribleft))}
+        ${row2('LIVE CTR START', sv(rep.lcstart), 'LIVE CTR LEFT', sv(rep.lcleft))}
+      </div>
+
+      <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:10px">
+        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Supply Changes</div>
         ${invRows}
       </div>
-      ${rep.photoName ? `<div style="background:#ede9ff;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.8rem;color:#6c63ff;display:flex;align-items:center;gap:8px"><span>📎</span><span>${rep.photoName}</span></div>` : ''}
-      ${(rep.notePub || rep.notePriv) ? `<div style="background:var(--card2);border-radius:10px;padding:14px;margin-bottom:4px">
-        <div style="font-size:0.7rem;color:var(--muted);font-weight:700;margin-bottom:6px">NOTES</div>
-        ${rep.notePub  ? `<div style="font-size:0.8rem;margin-bottom:4px"><span style="font-size:0.65rem;background:#22c98a22;color:#22c98a;padding:1px 6px;border-radius:8px;font-weight:700;margin-right:5px">PUBLIC</span>${rep.notePub}</div>` : ''}
-        ${rep.notePriv ? `<div style="font-size:0.8rem"><span style="font-size:0.65rem;background:#6c63ff22;color:#6c63ff;padding:1px 6px;border-radius:8px;font-weight:700;margin-right:5px">PRIVATE</span>${rep.notePriv}</div>` : ''}
+
+      ${rep.photoName ? `<div style="background:#ede9ff;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:0.8rem;color:#6c63ff;display:flex;align-items:center;gap:8px"><span>📎</span><span>${rep.photoName}</span></div>` : ''}
+      ${(rep.notePub || rep.notePriv) ? `<div style="background:var(--card2);border-radius:10px;padding:12px">
+        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Comment</div>
+        ${rep.notePub  ? `<div style="font-size:0.82rem;margin-bottom:6px"><span style="font-size:0.6rem;background:#22c98a22;color:#22c98a;padding:1px 6px;border-radius:8px;font-weight:700;margin-right:5px">PUBLIC</span>${rep.notePub}</div>` : ''}
+        ${rep.notePriv ? `<div style="font-size:0.82rem"><span style="font-size:0.6rem;background:#6c63ff22;color:#6c63ff;padding:1px 6px;border-radius:8px;font-weight:700;margin-right:5px">PRIVATE</span>${rep.notePriv}</div>` : ''}
       </div>` : ''}`;
   }
 
@@ -2403,17 +2513,16 @@ function _swSetNoteVis(vis) {
   const privBtn = document.getElementById('sw-note-priv-btn');
   if (!ta) return;
   // Style the active button
+  const hint = document.getElementById('sw-note-hint');
   if (vis === 'public') {
     pubBtn.style.borderColor  = '#6c63ff'; pubBtn.style.background  = '#ede9ff'; pubBtn.style.color  = '#6c63ff';
     privBtn.style.borderColor = 'var(--border)'; privBtn.style.background = 'white'; privBtn.style.color = 'var(--muted)';
-    ta.placeholder = 'Public note visible to the restaurant manager…';
-    const hint = ta.parentElement.querySelector('div');
+    ta.placeholder = 'Public comment visible to the restaurant manager…';
     if (hint) hint.textContent = 'Visible to the restaurant manager.';
   } else {
     privBtn.style.borderColor = '#6c63ff'; privBtn.style.background  = '#ede9ff'; privBtn.style.color  = '#6c63ff';
     pubBtn.style.borderColor  = 'var(--border)'; pubBtn.style.background  = 'white'; pubBtn.style.color  = 'var(--muted)';
-    ta.placeholder = 'Private note only visible to your manager…';
-    const hint = ta.parentElement.querySelector('div');
+    ta.placeholder = 'Private comment only visible to your manager…';
     if (hint) hint.textContent = 'Only visible to your own manager.';
   }
   // Store current note vis on a data attribute so submit can read it
@@ -2429,34 +2538,59 @@ function _swPreviewPhoto(photId, dayIdx, input) {
   if (nameEl)  { nameEl.textContent = name; }
 }
 
-function _swClearPhoto(photId, dayIdx) {
-  // just clears the preview — the submit will write undefined
+function _swClearPhoto() { /* preview cleared inline; submit reads input.files */ }
+
+function _swAutoTotal() {
+  const g = id => { const el = document.getElementById(id); return el ? +el.value || 0 : 0; };
+  const total = g('sw-cash') + g('sw-ccsale') + g('sw-sqsale');
+  const el = document.getElementById('sw-total');
+  if (el && document.activeElement !== el) el.value = total || '';
 }
 
 function _swSubmitReport(photId, restId, dayIdx) {
-  const salesEl  = document.getElementById('sw-sales');
-  const noteEl   = document.getElementById('sw-note');
-  const photoEl  = document.getElementById('sw-photo-input');
-  const sales    = salesEl  ? +salesEl.value  : 0;
+  const g  = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const gn = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const noteEl  = document.getElementById('sw-note');
+  const photoEl = document.getElementById('sw-photo-input');
+  const prevKey = _swKey(photId, dayIdx);
+  const prev    = (SHIFT_WORKFLOWS[prevKey] || {}).report || {};
+
   const noteVis  = (noteEl && noteEl.dataset.noteVis) ? noteEl.dataset.noteVis : 'public';
   const noteText = noteEl ? noteEl.value.trim() : '';
-  const photoName = (photoEl && photoEl.files && photoEl.files[0]) ? photoEl.files[0].name : (SHIFT_WORKFLOWS[_swKey(photId, dayIdx)]?.report?.photoName || '');
+  const photoName = (photoEl && photoEl.files && photoEl.files[0]) ? photoEl.files[0].name : (prev.photoName || '');
 
   const report = {
-    sales,
+    date:        g('sw-date'),
+    name:        g('sw-name'),
+    location:    g('sw-location'),
+    total:       gn('sw-total'),
+    cash:        gn('sw-cash'),
+    cashleft:    gn('sw-cashleft'),
+    ccsale:      gn('sw-ccsale'),
+    cctip:       gn('sw-cctip'),
+    sqsale:      gn('sw-sqsale'),
+    sqtip:       gn('sw-sqtip'),
+    commission:  gn('sw-commission'),
+    framesstart: gn('sw-framesstart'),
+    framesleft:  gn('sw-framesleft'),
+    ribstart:    gn('sw-ribstart'),
+    ribleft:     gn('sw-ribleft'),
+    lcstart:     gn('sw-lcstart'),
+    lcleft:      gn('sw-lcleft'),
     noteVis,
-    notePub:  noteVis === 'public'  ? noteText : (SHIFT_WORKFLOWS[_swKey(photId, dayIdx)]?.report?.notePub  || ''),
-    notePriv: noteVis === 'private' ? noteText : (SHIFT_WORKFLOWS[_swKey(photId, dayIdx)]?.report?.notePriv || ''),
+    notePub:  noteVis === 'public'  ? noteText : (prev.notePub  || ''),
+    notePriv: noteVis === 'private' ? noteText : (prev.notePriv || ''),
     photoName,
   };
 
-  // Post sales to SALES_DB and photographer
-  if (sales > 0) {
+  // Post total sales to SALES_DB
+  const salesAmt = +report.total || 0;
+  if (salesAmt > 0) {
     const wkKey = dbGetWeekKey(_weekOffset);
     if (!SALES_DB[wkKey]) SALES_DB[wkKey] = {};
     const phot = PHOTOGRAPHERS.find(p => p.id === photId);
     if (phot) {
-      SALES_DB[wkKey][phot.name] = (SALES_DB[wkKey][phot.name] || 0) + sales;
+      SALES_DB[wkKey][phot.name] = (SALES_DB[wkKey][phot.name] || 0) + salesAmt;
       loadWeekSales(wkKey);
     }
   }
