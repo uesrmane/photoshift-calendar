@@ -568,6 +568,10 @@
       <span class="nav-icon">🍽️</span>
       <span>Restaurants</span>
     </button>
+    <button class="nav-item" onclick="showSection('stats')">
+      <span class="nav-icon">📊</span>
+      <span>Stats</span>
+    </button>
   </nav>
   <nav class="nav" id="photographer-nav" style="display:none">
     <button class="nav-item active" onclick="showSection('my-portal')">
@@ -708,6 +712,11 @@
     <div id="portal-content"></div>
   </div>
 
+  <!-- ══ STATS ══ -->
+  <div class="section" id="section-stats">
+    <div id="stats-content"></div>
+  </div>
+
 </main>
 
 <!-- BOTTOM NAV (mobile) -->
@@ -722,6 +731,11 @@
     <div class="bn-icon-bg"></div>
     <span class="bn-icon">🍽️</span>
     <span>Restaurants</span>
+  </button>
+  <button class="bottom-nav-item bn-manager" onclick="showSection('stats', this)" id="bn-stats">
+    <div class="bn-icon-bg"></div>
+    <span class="bn-icon">📊</span>
+    <span>Stats</span>
   </button>
   <!-- Photographer item (hidden by default) -->
   <button class="bottom-nav-item bn-photographer" onclick="showSection('my-portal', this)" id="bn-my-portal" style="display:none">
@@ -1261,7 +1275,7 @@ function toggleAvail(photId, dayIdx) {
 
 // ─── SECTION NAV ────────────────────────────────────────────────────────────
 
-const SECTION_TITLES = { photographers:'Photographers', restaurants:'Restaurants', 'my-portal':'My Shifts' };
+const SECTION_TITLES = { photographers:'Photographers', restaurants:'Restaurants', 'my-portal':'My Shifts', stats:'Stats' };
 
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1276,6 +1290,7 @@ function showSection(id) {
   if (bnMatch) bnMatch.classList.add('active');
   const titleEl = document.getElementById('mobile-page-title');
   if (titleEl) titleEl.textContent = SECTION_TITLES[id] || id;
+  if (id === 'stats') renderStats();
   // scroll to top on mobile
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2596,6 +2611,302 @@ function _swSubmitReport(photId, restId, dayIdx) {
   }
 
   _swTransition(photId, restId, dayIdx, 'closed', { report });
+}
+
+// ─── STATS ───────────────────────────────────────────────────────────────────
+
+let _statsTab = 'photographers'; // 'photographers' | 'restaurants'
+
+function _statsParseHours(start, end) {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  return Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60);
+}
+
+function _statsAggregateAll() {
+  // Returns { byPhot: Map<photId, stats>, byRest: Map<restName, stats> }
+  const byPhot = new Map(); // photId → { name, color, initials, shifts, revenue, hours, framesSold, ribUsed, lcUsed, cash, cc, sq, commission }
+  const byRest = new Map(); // restName → { name, shifts, revenue, framesSold, ribUsed, lcUsed }
+
+  // Seed photographer map from PHOTOGRAPHERS list so everyone appears
+  PHOTOGRAPHERS.forEach(p => {
+    byPhot.set(p.id, {
+      name: p.name, color: p.color, initials: p.initials,
+      shifts: 0, revenue: 0, hours: 0,
+      framesSold: 0, ribUsed: 0, lcUsed: 0,
+      cash: 0, cashleft: 0, cc: 0, ccTip: 0, sq: 0, sqTip: 0, commission: 0,
+    });
+  });
+
+  // Seed restaurant map
+  RESTAURANTS.forEach(r => {
+    byRest.set(r.name, {
+      name: r.name, id: r.id,
+      shifts: 0, revenue: 0, framesSold: 0, ribUsed: 0, lcUsed: 0,
+    });
+  });
+
+  // Iterate all workflows
+  Object.entries(SHIFT_WORKFLOWS).forEach(([key, wf]) => {
+    if (wf.status !== 'closed') return;
+    const parts  = key.split('_');
+    const photId = +parts[0];
+    const dayIdx = +parts[1];
+    const weekKey = parts.slice(2).join('_'); // e.g. "2026-03-24"
+
+    const rep    = wf.report || {};
+    const revenue = +rep.total || 0;
+    const fs     = Math.max(0, (+rep.framesstart || 0) - (+rep.framesleft || 0));
+    const rib    = Math.max(0, (+rep.ribstart    || 0) - (+rep.ribleft   || 0));
+    const lc     = Math.max(0, (+rep.lcstart     || 0) - (+rep.lcleft    || 0));
+
+    // Hours from SHIFTS_BY_WEEK or WEEKLY_SHIFTS
+    const shiftArr = SHIFTS_BY_WEEK[weekKey] || (weekKey === dbGetWeekKey(_weekOffset) ? WEEKLY_SHIFTS : []);
+    const allDays  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const photObj  = PHOTOGRAPHERS.find(p => p.id === photId);
+    const photName = photObj ? photObj.name : (rep.name || '');
+    const restName = rep.location || '';
+    const shiftEntry = shiftArr.find(s => s.photographer === photName && s.dayName === allDays[dayIdx]);
+    const hrs = shiftEntry ? _statsParseHours(shiftEntry.start, shiftEntry.end) : 0;
+
+    // Photographer aggregation
+    if (byPhot.has(photId)) {
+      const ps = byPhot.get(photId);
+      ps.shifts++;
+      ps.revenue    += revenue;
+      ps.hours      += hrs;
+      ps.framesSold += fs;
+      ps.ribUsed    += rib;
+      ps.lcUsed     += lc;
+      ps.cash       += +rep.cash       || 0;
+      ps.cashleft   += +rep.cashleft   || 0;
+      ps.cc         += +rep.ccsale     || 0;
+      ps.ccTip      += +rep.cctip      || 0;
+      ps.sq         += +rep.sqsale     || 0;
+      ps.sqTip      += +rep.sqtip      || 0;
+      ps.commission += +rep.commission || 0;
+    }
+
+    // Restaurant aggregation
+    if (restName && byRest.has(restName)) {
+      const rs = byRest.get(restName);
+      rs.shifts++;
+      rs.revenue    += revenue;
+      rs.framesSold += fs;
+      rs.ribUsed    += rib;
+      rs.lcUsed     += lc;
+    }
+  });
+
+  return { byPhot, byRest };
+}
+
+function switchStatsTab(tab) {
+  _statsTab = tab;
+  renderStats();
+}
+
+function renderStats() {
+  const { byPhot, byRest } = _statsAggregateAll();
+
+  const totalRevenue   = [...byPhot.values()].reduce((a, p) => a + p.revenue, 0);
+  const totalShifts    = [...byPhot.values()].reduce((a, p) => a + p.shifts, 0);
+  const totalHours     = [...byPhot.values()].reduce((a, p) => a + p.hours, 0);
+  const totalFrames    = [...byPhot.values()].reduce((a, p) => a + p.framesSold, 0);
+  const avgPriceGlobal = totalFrames > 0 ? (totalRevenue / totalFrames) : 0;
+
+  const hasAny = totalShifts > 0;
+
+  // KPI bar
+  const fmt  = v => v > 0 ? '$' + v.toLocaleString() : '—';
+  const fmtN = v => v > 0 ? v.toLocaleString() : '—';
+  const kpis = `
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+      <div class="kpi-card c1" style="cursor:default"><div class="kpi-label">Total Revenue</div><div class="kpi-value" style="font-size:1.3rem">${fmt(totalRevenue)}</div><div class="kpi-sub">all closed shifts</div></div>
+      <div class="kpi-card c2" style="cursor:default"><div class="kpi-label">Shifts Closed</div><div class="kpi-value">${fmtN(totalShifts)}</div><div class="kpi-sub">with reports</div></div>
+      <div class="kpi-card c3" style="cursor:default"><div class="kpi-label">Hours Worked</div><div class="kpi-value">${totalHours > 0 ? totalHours.toFixed(1) + 'h' : '—'}</div><div class="kpi-sub">logged</div></div>
+      <div class="kpi-card c4" style="cursor:default"><div class="kpi-label">Avg $/Photo</div><div class="kpi-value" style="font-size:1.3rem">${avgPriceGlobal > 0 ? '$' + avgPriceGlobal.toFixed(2) : '—'}</div><div class="kpi-sub">across all shifts</div></div>
+    </div>`;
+
+  // Tab switcher
+  const tabs = `
+    <div style="display:flex;gap:8px;margin-bottom:18px">
+      <button onclick="switchStatsTab('photographers')"
+        style="padding:8px 18px;border-radius:20px;font-size:0.82rem;font-weight:700;cursor:pointer;border:1.5px solid ${_statsTab==='photographers'?'#6c63ff':'var(--border)'};background:${_statsTab==='photographers'?'#6c63ff':'white'};color:${_statsTab==='photographers'?'white':'var(--muted)'};transition:all 0.15s">
+        👥 Photographers
+      </button>
+      <button onclick="switchStatsTab('restaurants')"
+        style="padding:8px 18px;border-radius:20px;font-size:0.82rem;font-weight:700;cursor:pointer;border:1.5px solid ${_statsTab==='restaurants'?'#6c63ff':'var(--border)'};background:${_statsTab==='restaurants'?'#6c63ff':'white'};color:${_statsTab==='restaurants'?'white':'var(--muted)'};transition:all 0.15s">
+        🍽️ Restaurants
+      </button>
+    </div>`;
+
+  let content = '';
+
+  if (_statsTab === 'photographers') {
+    const sorted = [...byPhot.values()].sort((a, b) => b.revenue - a.revenue);
+    const cards = sorted.map(p => {
+      const avgPhoto  = p.framesSold > 0 ? (p.revenue / p.framesSold) : 0;
+      const hrsStr    = p.hours > 0 ? p.hours.toFixed(1) + 'h' : '—';
+      const revPerHr  = p.hours > 0 ? (p.revenue / p.hours) : 0;
+
+      // Payment breakdown bar
+      const total = p.cash + p.cc + p.sq;
+      const cashPct = total > 0 ? Math.round(p.cash / total * 100) : 0;
+      const ccPct   = total > 0 ? Math.round(p.cc   / total * 100) : 0;
+      const sqPct   = total > 0 ? Math.max(0, 100 - cashPct - ccPct) : 0;
+      const breakdownBar = total > 0 ? `
+        <div style="margin-top:10px">
+          <div style="font-size:0.62rem;color:var(--muted);font-weight:600;margin-bottom:4px">PAYMENT MIX</div>
+          <div style="display:flex;border-radius:4px;overflow:hidden;height:6px;gap:1px">
+            ${cashPct > 0 ? `<div style="width:${cashPct}%;background:#22c98a;border-radius:2px"></div>` : ''}
+            ${ccPct   > 0 ? `<div style="width:${ccPct}%;background:#6c63ff;border-radius:2px"></div>` : ''}
+            ${sqPct   > 0 ? `<div style="width:${sqPct}%;background:#f59e0b;border-radius:2px"></div>` : ''}
+          </div>
+          <div style="display:flex;gap:10px;margin-top:4px">
+            <span style="font-size:0.62rem;color:var(--muted)"><span style="color:#22c98a;font-weight:700">●</span> Cash ${cashPct}%</span>
+            <span style="font-size:0.62rem;color:var(--muted)"><span style="color:#6c63ff;font-weight:700">●</span> C.C. ${ccPct}%</span>
+            <span style="font-size:0.62rem;color:var(--muted)"><span style="color:#f59e0b;font-weight:700">●</span> Square ${sqPct}%</span>
+          </div>
+        </div>` : '';
+
+      const hasData = p.shifts > 0;
+      return `
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:${hasData ? '14px' : '0'}">
+            <div style="width:42px;height:42px;border-radius:50%;background:${p.color}22;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;color:${p.color};flex-shrink:0">${p.initials}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:0.95rem">${p.name}</div>
+              <div style="font-size:0.75rem;color:var(--muted);margin-top:1px">${hasData ? p.shifts + ' shift' + (p.shifts!==1?'s':'') + ' closed' : 'No closed shifts yet'}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-weight:800;font-size:1.1rem;color:${hasData?'var(--text)':'var(--muted)'}">${hasData ? '$' + p.revenue.toLocaleString() : '—'}</div>
+              <div style="font-size:0.7rem;color:var(--muted)">total revenue</div>
+            </div>
+          </div>
+          ${hasData ? `
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">HOURS</div>
+              <div style="font-size:0.95rem;font-weight:700">${hrsStr}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">$/HR</div>
+              <div style="font-size:0.95rem;font-weight:700">${revPerHr > 0 ? '$' + revPerHr.toFixed(0) : '—'}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">PHOTOS</div>
+              <div style="font-size:0.95rem;font-weight:700">${p.framesSold > 0 ? p.framesSold : '—'}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">$/PHOTO</div>
+              <div style="font-size:0.95rem;font-weight:700;color:${avgPhoto>0?'#6c63ff':'var(--text)'}">${avgPhoto > 0 ? '$' + avgPhoto.toFixed(2) : '—'}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px">
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">CASH</div>
+              <div style="font-size:0.88rem;font-weight:700;color:#22c98a">${p.cash > 0 ? '$'+p.cash.toLocaleString() : '—'}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">C.C.</div>
+              <div style="font-size:0.88rem;font-weight:700;color:#6c63ff">${p.cc > 0 ? '$'+p.cc.toLocaleString() : '—'}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">SQUARE</div>
+              <div style="font-size:0.88rem;font-weight:700;color:#f59e0b">${p.sq > 0 ? '$'+p.sq.toLocaleString() : '—'}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">COMMISSION</div>
+              <div style="font-size:0.88rem;font-weight:700;color:#ff6584">${p.commission > 0 ? '$'+p.commission.toLocaleString() : '—'}</div>
+            </div>
+          </div>
+          ${breakdownBar}
+          ` : ''}
+        </div>`;
+    }).join('');
+
+    content = hasAny ? cards : `<div class="card" style="text-align:center;padding:40px 20px;color:var(--muted)">
+      <div style="font-size:2.5rem;margin-bottom:12px">📊</div>
+      <div style="font-weight:600;margin-bottom:6px">No closed shifts yet</div>
+      <div style="font-size:0.82rem">Stats appear here once photographers complete the shift workflow and close their shifts.</div>
+    </div>`;
+
+  } else {
+    // Restaurant tab
+    const sorted = [...byRest.values()].sort((a, b) => b.revenue - a.revenue);
+    const cards = sorted.map(r => {
+      const avgPhoto = r.framesSold > 0 ? (r.revenue / r.framesSold) : 0;
+      const hasData  = r.shifts > 0;
+
+      // Find assigned photographers for this restaurant
+      const assignedPhots = [...new Set(WEEKLY_SHIFTS.filter(s => s.restaurant === r.name).map(s => s.photographer))];
+      const photDots = assignedPhots.map(name => {
+        const ph = PHOTOGRAPHERS.find(p => p.name === name);
+        return ph ? `<span title="${ph.name}" style="width:24px;height:24px;border-radius:50%;background:${ph.color}22;color:${ph.color};font-size:0.6rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid ${ph.color}44">${ph.initials}</span>` : '';
+      }).join('');
+
+      return `
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:${hasData?'14px':'0'}">
+            <div style="width:42px;height:42px;border-radius:10px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">🍽️</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:0.95rem">${r.name}</div>
+              <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">${photDots || '<span style="font-size:0.72rem;color:var(--muted)">No photographer assigned</span>'}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-weight:800;font-size:1.1rem;color:${hasData?'var(--text)':'var(--muted)'}">${hasData ? '$' + r.revenue.toLocaleString() : '—'}</div>
+              <div style="font-size:0.7rem;color:var(--muted)">total revenue</div>
+            </div>
+          </div>
+          ${hasData ? `
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">SHIFTS</div>
+              <div style="font-size:0.95rem;font-weight:700">${r.shifts}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">$/SHIFT</div>
+              <div style="font-size:0.95rem;font-weight:700">${r.shifts > 0 ? '$' + Math.round(r.revenue/r.shifts).toLocaleString() : '—'}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">PHOTOS</div>
+              <div style="font-size:0.95rem;font-weight:700">${r.framesSold > 0 ? r.framesSold : '—'}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">$/PHOTO</div>
+              <div style="font-size:0.95rem;font-weight:700;color:${avgPhoto>0?'#6c63ff':'var(--text)'}">${avgPhoto > 0 ? '$' + avgPhoto.toFixed(2) : '—'}</div>
+            </div>
+          </div>
+          ${(r.ribUsed > 0 || r.lcUsed > 0) ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">RIB/PAPER USED</div>
+              <div style="font-size:0.95rem;font-weight:700">${r.ribUsed > 0 ? r.ribUsed : '—'}</div>
+            </div>
+            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
+              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">LIVE COUNTER Δ</div>
+              <div style="font-size:0.95rem;font-weight:700">${r.lcUsed > 0 ? r.lcUsed : '—'}</div>
+            </div>
+          </div>` : ''}
+          ` : `<div style="font-size:0.8rem;color:var(--muted);font-style:italic;margin-top:4px">No closed shifts yet</div>`}
+        </div>`;
+    }).join('');
+
+    content = cards;
+  }
+
+  document.getElementById('stats-content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Stats</div>
+        <div class="page-sub">Aggregated from all completed shift reports</div>
+      </div>
+    </div>
+    ${kpis}
+    ${tabs}
+    ${content}`;
 }
 
 // ─── SEARCH / FILTER ─────────────────────────────────────────────────────────
