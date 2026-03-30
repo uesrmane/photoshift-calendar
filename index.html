@@ -572,6 +572,10 @@
       <span class="nav-icon">📊</span>
       <span>Stats</span>
     </button>
+    <button class="nav-item" onclick="showSection('reports')">
+      <span class="nav-icon">📋</span>
+      <span>Reports</span>
+    </button>
   </nav>
   <nav class="nav" id="photographer-nav" style="display:none">
     <button class="nav-item active" onclick="showSection('my-portal')">
@@ -717,6 +721,11 @@
     <div id="stats-content"></div>
   </div>
 
+  <!-- ══ REPORTS ══ -->
+  <div class="section" id="section-reports">
+    <div id="reports-content"></div>
+  </div>
+
 </main>
 
 <!-- BOTTOM NAV (mobile) -->
@@ -736,6 +745,11 @@
     <div class="bn-icon-bg"></div>
     <span class="bn-icon">📊</span>
     <span>Stats</span>
+  </button>
+  <button class="bottom-nav-item bn-manager" onclick="showSection('reports', this)" id="bn-reports">
+    <div class="bn-icon-bg"></div>
+    <span class="bn-icon">📋</span>
+    <span>Reports</span>
   </button>
   <!-- Photographer item (hidden by default) -->
   <button class="bottom-nav-item bn-photographer" onclick="showSection('my-portal', this)" id="bn-my-portal" style="display:none">
@@ -1275,7 +1289,7 @@ function toggleAvail(photId, dayIdx) {
 
 // ─── SECTION NAV ────────────────────────────────────────────────────────────
 
-const SECTION_TITLES = { photographers:'Photographers', restaurants:'Restaurants', 'my-portal':'My Shifts', stats:'Stats' };
+const SECTION_TITLES = { photographers:'Photographers', restaurants:'Restaurants', 'my-portal':'My Shifts', stats:'Stats', reports:'Reports' };
 
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1290,7 +1304,8 @@ function showSection(id) {
   if (bnMatch) bnMatch.classList.add('active');
   const titleEl = document.getElementById('mobile-page-title');
   if (titleEl) titleEl.textContent = SECTION_TITLES[id] || id;
-  if (id === 'stats') renderStats();
+  if (id === 'stats')   renderStats();
+  if (id === 'reports') renderReports();
   // scroll to top on mobile
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2129,7 +2144,7 @@ function _drawerRestTopSales() {
 }
 
 // ─── SHIFT WORKFLOW ──────────────────────────────────────────────────────────
-// States: not_started → opening_inventory → active → closing_inventory → reporting → closed
+// States: not_started → opening_inventory → active → reporting → closed
 
 function _swKey(photId, dayIdx) {
   return `${photId}_${dayIdx}_${dbGetWeekKey(_weekOffset)}`;
@@ -2158,11 +2173,10 @@ function _swProgress(status) {
   const steps = [
     { id: 'opening_inventory', label: 'Open Inv.' },
     { id: 'active',            label: 'Active'    },
-    { id: 'closing_inventory', label: 'Close Inv.'},
     { id: 'reporting',         label: 'Report'    },
     { id: 'closed',            label: 'Closed'    },
   ];
-  const order = ['not_started','opening_inventory','active','closing_inventory','reporting','closed'];
+  const order = ['not_started','opening_inventory','active','reporting','closed'];
   const curIdx = order.indexOf(status);
   const dots = steps.map((s, i) => {
     const sIdx = order.indexOf(s.id);
@@ -2265,45 +2279,14 @@ function _renderShiftWorkflow(photId, restId, dayIdx) {
             }).join('');
           })()}
         </div>
-        <button onclick="_swTransition(${photId},${restId},${dayIdx},'closing_inventory')"
+        <button onclick="_swTransition(${photId},${restId},${dayIdx},'reporting')"
           style="background:#f59e0b;color:white;border:none;border-radius:10px;padding:11px 0;width:100%;font-size:0.88rem;font-weight:700;cursor:pointer;transition:opacity 0.15s"
-          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Done Shooting – Close Inventory →</button>
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Done Shooting – Fill Report →</button>
       </div>`;
-
-  } else if (status === 'closing_inventory') {
-    const supplies = RESTAURANT_SUPPLIES[restId] || [];
-    const openInv  = wf.openInv || {};
-    const saved    = wf.closeInv || {};
-    const rows = supplies.length
-      ? supplies.map((s, idx) => {
-          const openVal  = openInv[idx] !== undefined ? openInv[idx] : s.qty;
-          const closeVal = saved[idx]   !== undefined ? saved[idx]   : openVal;
-          const diff     = +closeVal - +openVal;
-          const diffStr  = diff > 0 ? `+${diff}` : `${diff}`;
-          const diffCol  = diff < 0 ? '#ff6584' : diff > 0 ? '#22c98a' : 'var(--muted)';
-          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
-            <div style="flex:1;font-size:0.8rem">${s.item}</div>
-            <div style="font-size:0.7rem;color:var(--muted);text-align:right">${openVal}<span style="color:var(--border)">→</span></div>
-            <input type="number" id="sw-ci-${idx}" value="${closeVal}" min="0"
-              style="width:58px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:0.82rem;background:white"
-              oninput="document.getElementById('sw-ci-diff-${idx}').textContent=(+this.value-${openVal}>=0?'+':'')+(+this.value-${openVal});document.getElementById('sw-ci-diff-${idx}').style.color=+this.value-${openVal}<0?'#ff6584':+this.value-${openVal}>0?'#22c98a':'var(--muted)'">
-            <div id="sw-ci-diff-${idx}" style="width:36px;font-size:0.72rem;font-weight:700;color:${diffCol};text-align:right">${diffStr}</div>
-          </div>`;
-        }).join('')
-      : `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;padding:12px 0">No supply items listed.</div>`;
-
-    body = `
-      <div style="font-weight:600;font-size:0.88rem;margin-bottom:6px">Closing Inventory Count</div>
-      <div style="color:var(--muted);font-size:0.78rem;margin-bottom:12px">Update quantities after your shift. Changes from opening are shown.</div>
-      <div style="margin-bottom:16px">${rows}</div>
-      <button onclick="_swSaveCloseInventory(${photId},${restId},${dayIdx},${supplies.length})"
-        style="background:#6c63ff;color:white;border:none;border-radius:10px;padding:10px 0;width:100%;font-size:0.88rem;font-weight:700;cursor:pointer;transition:opacity 0.15s"
-        onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save & Go to Report →</button>`;
 
   } else if (status === 'reporting') {
     const saved = wf.report || {};
     const r = (key, def='') => saved[key] !== undefined ? saved[key] : def;
-    const noteVis   = r('noteVis', 'public');
     const photoName = r('photoName', '');
     const todayD = new Date();
     const autoDate = r('date', String(todayD.getDate()).padStart(2,'0') + '.' + String(todayD.getMonth()+1).padStart(2,'0'));
@@ -2368,21 +2351,31 @@ function _renderShiftWorkflow(photId, restId, dayIdx) {
         </div>
       </div>
 
-      <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:10px;text-transform:uppercase">Counters</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          ${nf('sw-framesstart', 'Frames start', r('framesstart',''))}
-          ${nf('sw-framesleft',  'Frames left',  r('framesleft',''))}
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          ${nf('sw-ribstart', 'Rib/paper start', r('ribstart',''))}
-          ${nf('sw-ribleft',  'Rib/paper left',  r('ribleft',''))}
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          ${nf('sw-lcstart', 'Live counter start', r('lcstart',''))}
-          ${nf('sw-lcleft',  'Live counter left',  r('lcleft',''))}
-        </div>
-      </div>
+      ${(() => {
+        const supplies = RESTAURANT_SUPPLIES[restId] || [];
+        const openInv  = wf.openInv || {};
+        const savedCi  = wf.closeInv || {};
+        if (!supplies.length) return '';
+        const rows = supplies.map((s, idx) => {
+          const openVal  = openInv[idx] !== undefined ? openInv[idx] : s.qty;
+          const closeVal = savedCi[idx] !== undefined ? savedCi[idx] : openVal;
+          const diff     = +closeVal - +openVal;
+          const diffStr  = diff > 0 ? `+${diff}` : `${diff}`;
+          const diffCol  = diff < 0 ? '#ff6584' : diff > 0 ? '#22c98a' : 'var(--muted)';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1;font-size:0.8rem">${s.item}</div>
+            <div style="font-size:0.68rem;color:var(--muted);flex-shrink:0">${openVal} →</div>
+            <input type="number" id="sw-ci-${idx}" value="${closeVal}" min="0"
+              style="width:56px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:0.82rem;background:white;flex-shrink:0"
+              oninput="document.getElementById('sw-ci-diff-${idx}').textContent=(+this.value-${openVal}>=0?'+':'')+(+this.value-${openVal});document.getElementById('sw-ci-diff-${idx}').style.color=+this.value-${openVal}<0?'#ff6584':+this.value-${openVal}>0?'#22c98a':'var(--muted)'">
+            <div id="sw-ci-diff-${idx}" style="width:34px;font-size:0.72rem;font-weight:700;color:${diffCol};text-align:right;flex-shrink:0">${diffStr}</div>
+          </div>`;
+        }).join('');
+        return `<div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:12px">
+          <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:6px;text-transform:uppercase">Closing Inventory <span style="font-weight:400;color:var(--muted)">(open qty → close qty)</span></div>
+          ${rows}
+        </div>`;
+      })()}
 
       <div style="margin-bottom:12px">
         <label style="font-size:0.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">ATTACH PHOTO (optional)</label>
@@ -2403,19 +2396,8 @@ function _renderShiftWorkflow(photId, restId, dayIdx) {
 
       <div style="margin-bottom:16px">
         <label style="font-size:0.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">COMMENT (optional)</label>
-        <div style="display:flex;gap:6px;margin-bottom:8px">
-          <button id="sw-note-pub-btn" onclick="_swSetNoteVis('public')"
-            style="flex:1;border-radius:7px;padding:6px 0;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid ${noteVis==='public'?'#6c63ff':'var(--border)'};background:${noteVis==='public'?'#ede9ff':'white'};color:${noteVis==='public'?'#6c63ff':'var(--muted)'}">
-            🌐 Public
-          </button>
-          <button id="sw-note-priv-btn" onclick="_swSetNoteVis('private')"
-            style="flex:1;border-radius:7px;padding:6px 0;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid ${noteVis==='private'?'#6c63ff':'var(--border)'};background:${noteVis==='private'?'#ede9ff':'white'};color:${noteVis==='private'?'#6c63ff':'var(--muted)'}">
-            🔒 Private
-          </button>
-        </div>
-        <div id="sw-note-hint" style="font-size:0.7rem;color:var(--muted);margin-bottom:6px">${noteVis==='public'?'Visible to the restaurant manager.':'Only visible to your own manager.'}</div>
         <textarea id="sw-note" rows="3" placeholder="Add a comment about the shift…"
-          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:0.82rem;resize:vertical;background:white">${noteVis==='public'?r('notePub',''):r('notePriv','')}</textarea>
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:0.82rem;resize:vertical;background:white">${r('note','')}</textarea>
       </div>
 
       <button onclick="_swSubmitReport(${photId},${restId},${dayIdx})"
@@ -2481,22 +2463,14 @@ function _renderShiftWorkflow(photId, restId, dayIdx) {
       </div>
 
       <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:10px">
-        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Counters</div>
-        ${row2('FRAMES START', sv(rep.framesstart), 'FRAMES LEFT', sv(rep.framesleft))}
-        ${row2('RIB/PAPER START', sv(rep.ribstart), 'RIB/PAPER LEFT', sv(rep.ribleft))}
-        ${row2('LIVE CTR START', sv(rep.lcstart), 'LIVE CTR LEFT', sv(rep.lcleft))}
-      </div>
-
-      <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:10px">
-        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Supply Changes</div>
+        <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Inventory Changes</div>
         ${invRows}
       </div>
 
       ${rep.photoName ? `<div style="background:#ede9ff;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:0.8rem;color:#6c63ff;display:flex;align-items:center;gap:8px"><span>📎</span><span>${rep.photoName}</span></div>` : ''}
-      ${(rep.notePub || rep.notePriv) ? `<div style="background:var(--card2);border-radius:10px;padding:12px">
+      ${rep.note ? `<div style="background:var(--card2);border-radius:10px;padding:12px">
         <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Comment</div>
-        ${rep.notePub  ? `<div style="font-size:0.82rem;margin-bottom:6px"><span style="font-size:0.6rem;background:#22c98a22;color:#22c98a;padding:1px 6px;border-radius:8px;font-weight:700;margin-right:5px">PUBLIC</span>${rep.notePub}</div>` : ''}
-        ${rep.notePriv ? `<div style="font-size:0.82rem"><span style="font-size:0.6rem;background:#6c63ff22;color:#6c63ff;padding:1px 6px;border-radius:8px;font-weight:700;margin-right:5px">PRIVATE</span>${rep.notePriv}</div>` : ''}
+        <div style="font-size:0.82rem;line-height:1.5">${rep.note}</div>
       </div>` : ''}`;
   }
 
@@ -2512,14 +2486,6 @@ function _swSaveOpenInventory(photId, restId, dayIdx, count) {
   _swTransition(photId, restId, dayIdx, 'active', { openInv: inv });
 }
 
-function _swSaveCloseInventory(photId, restId, dayIdx, count) {
-  const inv = {};
-  for (let i = 0; i < count; i++) {
-    const el = document.getElementById(`sw-ci-${i}`);
-    if (el) inv[i] = +el.value;
-  }
-  _swTransition(photId, restId, dayIdx, 'reporting', { closeInv: inv });
-}
 
 function _swSetNoteVis(vis) {
   // Save current textarea content first, then swap
@@ -2570,31 +2536,30 @@ function _swSubmitReport(photId, restId, dayIdx) {
   const prevKey = _swKey(photId, dayIdx);
   const prev    = (SHIFT_WORKFLOWS[prevKey] || {}).report || {};
 
-  const noteVis  = (noteEl && noteEl.dataset.noteVis) ? noteEl.dataset.noteVis : 'public';
-  const noteText = noteEl ? noteEl.value.trim() : '';
+  const note     = noteEl ? noteEl.value.trim() : '';
   const photoName = (photoEl && photoEl.files && photoEl.files[0]) ? photoEl.files[0].name : (prev.photoName || '');
 
+  // Read closing inventory from real supply item inputs
+  const closeInv = {};
+  const supplies = RESTAURANT_SUPPLIES[restId] || [];
+  supplies.forEach((s, idx) => {
+    const el = document.getElementById(`sw-ci-${idx}`);
+    if (el) closeInv[idx] = +el.value;
+  });
+
   const report = {
-    date:        g('sw-date'),
-    name:        g('sw-name'),
-    location:    g('sw-location'),
-    total:       gn('sw-total'),
-    cash:        gn('sw-cash'),
-    cashleft:    gn('sw-cashleft'),
-    ccsale:      gn('sw-ccsale'),
-    cctip:       gn('sw-cctip'),
-    sqsale:      gn('sw-sqsale'),
-    sqtip:       gn('sw-sqtip'),
-    commission:  gn('sw-commission'),
-    framesstart: gn('sw-framesstart'),
-    framesleft:  gn('sw-framesleft'),
-    ribstart:    gn('sw-ribstart'),
-    ribleft:     gn('sw-ribleft'),
-    lcstart:     gn('sw-lcstart'),
-    lcleft:      gn('sw-lcleft'),
-    noteVis,
-    notePub:  noteVis === 'public'  ? noteText : (prev.notePub  || ''),
-    notePriv: noteVis === 'private' ? noteText : (prev.notePriv || ''),
+    date:       g('sw-date'),
+    name:       g('sw-name'),
+    location:   g('sw-location'),
+    total:      gn('sw-total'),
+    cash:       gn('sw-cash'),
+    cashleft:   gn('sw-cashleft'),
+    ccsale:     gn('sw-ccsale'),
+    cctip:      gn('sw-cctip'),
+    sqsale:     gn('sw-sqsale'),
+    sqtip:      gn('sw-sqtip'),
+    commission: gn('sw-commission'),
+    note,
     photoName,
   };
 
@@ -2610,7 +2575,590 @@ function _swSubmitReport(photId, restId, dayIdx) {
     }
   }
 
-  _swTransition(photId, restId, dayIdx, 'closed', { report });
+  _swTransition(photId, restId, dayIdx, 'closed', { report, closeInv });
+}
+
+// ─── REPORTS ─────────────────────────────────────────────────────────────────
+
+let _reportsFilter = { q: '', phot: '', rest: '' };
+let _fleetPeriod   = 'week'; // 'day' | 'week' | 'month' | 'year'
+
+function renderReports() {
+  // Build flat list of all closed reports from SHIFT_WORKFLOWS
+  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const rows = [];
+
+  Object.entries(SHIFT_WORKFLOWS).forEach(([key, wf]) => {
+    if (wf.status !== 'closed') return;
+    const parts   = key.split('_');
+    const photId  = +parts[0];
+    const dayIdx  = +parts[1];
+    const weekKey = parts.slice(2).join('_');
+
+    const phot    = PHOTOGRAPHERS.find(p => p.id === photId);
+    const rep     = wf.report || {};
+    const oi      = wf.openInv  || {};
+    const ci      = wf.closeInv || {};
+
+    // Resolve shift for time
+    const shiftArr = SHIFTS_BY_WEEK[weekKey] || (weekKey === dbGetWeekKey(_weekOffset) ? WEEKLY_SHIFTS : []);
+    const photName = phot ? phot.name : (rep.name || '—');
+    const shift    = shiftArr.find(s => s.photographer === photName && s.dayName === allDays[dayIdx]);
+
+    // Parse date for sorting: rep.date is DD.MM, weekKey is YYYY-MM-DD (start of week Mon)
+    let sortTs = 0;
+    if (rep.date && rep.date.includes('.')) {
+      const [dd, mm] = rep.date.split('.').map(Number);
+      const yyyy = weekKey ? +weekKey.slice(0, 4) : new Date().getFullYear();
+      sortTs = new Date(yyyy, mm - 1, dd).getTime();
+    } else if (weekKey) {
+      sortTs = new Date(weekKey).getTime() + dayIdx * 86400000;
+    }
+
+    // Frames sold from supply items
+    const restObj = RESTAURANTS.find(r => r.name === (rep.location || ''));
+    const supplyItems = restObj ? (RESTAURANT_SUPPLIES[restObj.id] || []) : [];
+    let framesSold = 0;
+    supplyItems.forEach((s, idx) => {
+      if (/frame/i.test(s.item)) {
+        const o = oi[idx] !== undefined ? +oi[idx] : s.qty;
+        const c = ci[idx] !== undefined ? +ci[idx] : o;
+        framesSold += Math.max(0, o - c);
+      }
+    });
+
+    rows.push({
+      key, photId, dayIdx, weekKey, sortTs,
+      photName,
+      color:      phot ? phot.color    : '#6b7280',
+      initials:   phot ? phot.initials : '??',
+      restaurant: rep.location || '—',
+      date:       rep.date     || weekKey || '—',
+      shiftTime:  shift ? `${shift.start} – ${shift.end}` : '—',
+      total:      +rep.total      || 0,
+      cash:       +rep.cash       || 0,
+      cashleft:   +rep.cashleft   || 0,
+      ccsale:     +rep.ccsale     || 0,
+      cctip:      +rep.cctip      || 0,
+      sqsale:     +rep.sqsale     || 0,
+      sqtip:      +rep.sqtip      || 0,
+      commission: +rep.commission || 0,
+      framesSold,
+      note:       rep.note || '',
+      photoName:  rep.photoName || '',
+      openInv: oi, closeInv: ci, supplyItems,
+    });
+  });
+
+  // Sort newest first
+  rows.sort((a, b) => b.sortTs - a.sortTs);
+
+  // Apply filters
+  const f = _reportsFilter;
+  const filtered = rows.filter(r => {
+    const q = f.q.toLowerCase();
+    if (q && !r.photName.toLowerCase().includes(q) && !r.restaurant.toLowerCase().includes(q) && !r.date.includes(q)) return false;
+    if (f.phot && r.photName !== f.phot) return false;
+    if (f.rest && r.restaurant !== f.rest) return false;
+    return true;
+  });
+
+  // Photographer options for filter
+  const photOptions = [...new Set(rows.map(r => r.photName))].sort()
+    .map(n => `<option value="${n}" ${f.phot === n ? 'selected' : ''}>${n}</option>`).join('');
+  const restOptions = [...new Set(rows.map(r => r.restaurant))].sort()
+    .map(n => `<option value="${n}" ${f.rest === n ? 'selected' : ''}>${n}</option>`).join('');
+
+  // Summary KPIs
+  const totalRev  = filtered.reduce((a, r) => a + r.total, 0);
+  const totalComm = filtered.reduce((a, r) => a + r.commission, 0);
+  const totalFrames = filtered.reduce((a, r) => a + r.framesSold, 0);
+  const avgPhoto  = totalFrames > 0 ? totalRev / totalFrames : 0;
+
+  const kpis = `
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+      <div class="kpi-card c1" style="cursor:default"><div class="kpi-label">Reports</div><div class="kpi-value">${filtered.length}</div><div class="kpi-sub">matching</div></div>
+      <div class="kpi-card c2" style="cursor:default"><div class="kpi-label">Revenue</div><div class="kpi-value" style="font-size:1.3rem">${totalRev > 0 ? '$' + totalRev.toLocaleString() : '—'}</div><div class="kpi-sub">filtered total</div></div>
+      <div class="kpi-card c3" style="cursor:default"><div class="kpi-label">Commission</div><div class="kpi-value" style="font-size:1.3rem">${totalComm > 0 ? '$' + totalComm.toLocaleString() : '—'}</div><div class="kpi-sub">filtered total</div></div>
+      <div class="kpi-card c4" style="cursor:default"><div class="kpi-label">Avg $/Photo</div><div class="kpi-value" style="font-size:1.3rem">${avgPhoto > 0 ? '$' + avgPhoto.toFixed(2) : '—'}</div><div class="kpi-sub">filtered</div></div>
+    </div>`;
+
+  // Filter bar
+  const filterBar = `
+    <div class="card" style="margin-bottom:16px;padding:12px 16px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div class="search-box" style="flex:1;min-width:160px">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Search name, restaurant, date…" value="${f.q}"
+            oninput="_reportsFilter.q=this.value;renderReports()" style="width:100%"/>
+        </div>
+        <select onchange="_reportsFilter.phot=this.value;renderReports()"
+          style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:0.82rem;background:white;color:var(--text);cursor:pointer">
+          <option value="" ${!f.phot?'selected':''}>All photographers</option>
+          ${photOptions}
+        </select>
+        <select onchange="_reportsFilter.rest=this.value;renderReports()"
+          style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:0.82rem;background:white;color:var(--text);cursor:pointer">
+          <option value="" ${!f.rest?'selected':''}>All restaurants</option>
+          ${restOptions}
+        </select>
+        ${(f.q || f.phot || f.rest) ? `<button onclick="_reportsFilter={q:'',phot:'',rest:''};renderReports()"
+          style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:0.8rem;background:white;color:var(--muted);cursor:pointer">✕ Clear</button>` : ''}
+      </div>
+    </div>`;
+
+  // Report rows
+  let listHtml = '';
+  if (filtered.length === 0) {
+    listHtml = `<div class="card" style="text-align:center;padding:40px 20px;color:var(--muted)">
+      <div style="font-size:2.5rem;margin-bottom:12px">📋</div>
+      <div style="font-weight:600;margin-bottom:6px">${rows.length === 0 ? 'No reports yet' : 'No results match your filters'}</div>
+      <div style="font-size:0.82rem">${rows.length === 0 ? 'Reports appear here once photographers close their shifts.' : 'Try clearing the filters.'}</div>
+    </div>`;
+  } else {
+    listHtml = filtered.map(r => {
+      const avgP = r.framesSold > 0 ? (r.total / r.framesSold).toFixed(2) : null;
+      return `
+        <div class="card" onclick="openReportDetail('${r.key}')" style="margin-bottom:10px;cursor:pointer;transition:box-shadow 0.13s,transform 0.1s"
+          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'"
+          onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:40px;height:40px;border-radius:50%;background:${r.color}22;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;color:${r.color};flex-shrink:0">${r.initials}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.photName}</div>
+              <div style="font-size:0.75rem;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🍽️ ${r.restaurant} &nbsp;·&nbsp; 📅 ${r.date} &nbsp;·&nbsp; ⏰ ${r.shiftTime}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;padding-left:8px">
+              <div style="font-weight:800;font-size:1.05rem">${r.total > 0 ? '$' + r.total.toLocaleString() : '—'}</div>
+              <div style="font-size:0.68rem;color:var(--muted);margin-top:2px">
+                ${r.framesSold > 0 ? r.framesSold + ' photos' : ''}
+                ${avgP ? ' · $' + avgP + '/ph' : ''}
+              </div>
+            </div>
+            <div style="color:var(--muted);font-size:1.1rem;opacity:0.4;flex-shrink:0">›</div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+            ${r.total      > 0 ? `<span style="font-size:0.65rem;background:#22c98a18;color:#22c98a;padding:2px 8px;border-radius:10px;font-weight:700">Total $${r.total.toLocaleString()}</span>` : ''}
+            ${r.cash       > 0 ? `<span style="font-size:0.65rem;background:var(--card2);color:var(--muted);padding:2px 8px;border-radius:10px">Cash $${r.cash.toLocaleString()}</span>` : ''}
+            ${r.ccsale     > 0 ? `<span style="font-size:0.65rem;background:var(--card2);color:var(--muted);padding:2px 8px;border-radius:10px">C.C. $${r.ccsale.toLocaleString()}</span>` : ''}
+            ${r.sqsale     > 0 ? `<span style="font-size:0.65rem;background:var(--card2);color:var(--muted);padding:2px 8px;border-radius:10px">Square $${r.sqsale.toLocaleString()}</span>` : ''}
+            ${r.commission > 0 ? `<span style="font-size:0.65rem;background:#6c63ff18;color:#6c63ff;padding:2px 8px;border-radius:10px;font-weight:700">Comm. $${r.commission.toLocaleString()}</span>` : ''}
+            ${r.note ? `<span style="font-size:0.65rem;background:#f59e0b18;color:#f59e0b;padding:2px 8px;border-radius:10px">💬 Note</span>` : ''}
+            ${r.photoName ? `<span style="font-size:0.65rem;background:#ede9ff;color:#6c63ff;padding:2px 8px;border-radius:10px">📎 Photo</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  document.getElementById('reports-content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Reports</div>
+        <div class="page-sub">All closed shift reports from your photographers</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;background:var(--card2);border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:0.75rem;font-weight:700">
+          ${['day','week','month','year'].map(p => `
+          <button onclick="_fleetPeriod='${p}';renderReports()"
+            style="padding:6px 11px;border:none;cursor:pointer;background:${_fleetPeriod===p?'var(--accent)':'transparent'};color:${_fleetPeriod===p?'white':'var(--muted)'};transition:background 0.15s,color 0.15s;text-transform:capitalize">
+            ${p.charAt(0).toUpperCase()+p.slice(1)}
+          </button>`).join('')}
+        </div>
+        <button class="btn btn-primary" onclick="generateFleetReport()" ${rows.length === 0 ? 'disabled style="opacity:0.5;cursor:not-allowed"' : ''}>⬇ Fleet Report</button>
+      </div>
+    </div>
+    ${kpis}
+    ${filterBar}
+    ${listHtml}`;
+}
+
+function openReportDetail(key) {
+  const wf  = SHIFT_WORKFLOWS[key];
+  if (!wf || !wf.report) return;
+  const parts   = key.split('_');
+  const photId  = +parts[0];
+  const dayIdx  = +parts[1];
+  const weekKey = parts.slice(2).join('_');
+  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+  const rep    = wf.report;
+  const oi     = wf.openInv  || {};
+  const ci     = wf.closeInv || {};
+  const phot   = PHOTOGRAPHERS.find(p => p.id === photId);
+  const restObj = RESTAURANTS.find(r => r.name === (rep.location || ''));
+  const supplyItems = restObj ? (RESTAURANT_SUPPLIES[restObj.id] || []) : [];
+  const shiftArr = SHIFTS_BY_WEEK[weekKey] || (weekKey === dbGetWeekKey(_weekOffset) ? WEEKLY_SHIFTS : []);
+  const photName = phot ? phot.name : (rep.name || '—');
+  const shift    = shiftArr.find(s => s.photographer === photName && s.dayName === allDays[dayIdx]);
+  const color    = phot ? phot.color    : '#6b7280';
+  const initials = phot ? phot.initials : '??';
+
+  const sv = (val, prefix='$') => (val !== '' && val !== undefined && +val > 0)
+    ? `<strong>${prefix}${(+val).toLocaleString()}</strong>`
+    : `<span style="color:var(--muted)">—</span>`;
+
+  const fieldRow = (label, val) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.82rem">
+      <span style="color:var(--muted);font-size:0.72rem;font-weight:600;text-transform:uppercase">${label}</span>
+      <span>${val}</span>
+    </div>`;
+
+  // Inventory changes
+  const invRows = supplyItems.length ? supplyItems.map((s, idx) => {
+    const o = oi[idx] !== undefined ? +oi[idx] : s.qty;
+    const c = ci[idx] !== undefined ? +ci[idx] : o;
+    const d = c - o;
+    const dStr = d > 0 ? `+${d}` : `${d}`;
+    const dCol = d < 0 ? '#ff6584' : d > 0 ? '#22c98a' : 'var(--muted)';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span>${s.item}</span>
+      <span style="color:var(--muted)">${o} → ${c} <strong style="color:${dCol}">(${dStr})</strong></span>
+    </div>`;
+  }).join('') : `<div style="color:var(--muted);font-size:0.78rem;font-style:italic">No supply data.</div>`;
+
+  openDrawer(`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <div style="width:44px;height:44px;border-radius:50%;background:${color}22;display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:800;color:${color};flex-shrink:0">${initials}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:1rem">${photName}</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:1px">🍽️ ${rep.location || '—'} &nbsp;·&nbsp; 📅 ${rep.date || '—'} &nbsp;·&nbsp; ⏰ ${shift ? shift.start + ' – ' + shift.end : '—'}</div>
+      </div>
+      <button onclick="downloadReport('${key}')"
+        style="flex-shrink:0;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;color:var(--text);white-space:nowrap"
+        onmouseover="this.style.background='var(--accent-light)';this.style.color='var(--accent)'"
+        onmouseout="this.style.background='var(--card2)';this.style.color='var(--text)'">⬇ CSV</button>
+    </div>
+
+    <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Sales</div>
+      ${fieldRow('Total',      sv(rep.total))}
+      ${fieldRow('Cash',       sv(rep.cash))}
+      ${fieldRow('Cash left',  sv(rep.cashleft))}
+      ${fieldRow('C.C. sale',  sv(rep.ccsale))}
+      ${fieldRow('C.C. tip',   sv(rep.cctip))}
+      ${fieldRow('Square sale',sv(rep.sqsale))}
+      ${fieldRow('Square tip', sv(rep.sqtip))}
+      ${fieldRow('Commission', sv(rep.commission))}
+    </div>
+
+    <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase">Inventory Changes</div>
+      ${invRows}
+    </div>
+
+    ${rep.photoName ? `<div style="background:#ede9ff;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.8rem;color:#6c63ff;display:flex;align-items:center;gap:8px"><span>📎</span><span>${rep.photoName}</span></div>` : ''}
+
+    ${rep.note ? `<div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:4px">
+      <div style="font-size:0.62rem;color:var(--muted);font-weight:700;margin-bottom:6px;text-transform:uppercase">Comment</div>
+      <div style="font-size:0.82rem;line-height:1.5">${rep.note}</div>
+    </div>` : ''}
+  `);
+}
+
+// ─── DOWNLOADS ───────────────────────────────────────────────────────────────
+
+function _triggerDownload(filename, content, type = 'text/csv;charset=utf-8;') {
+  const blob = new Blob(['\uFEFF' + content], { type });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 300);
+}
+
+function downloadReport(key) {
+  const wf = SHIFT_WORKFLOWS[key];
+  if (!wf || !wf.report) return;
+  const rep   = wf.report;
+  const oi    = wf.openInv  || {};
+  const ci    = wf.closeInv || {};
+  const parts = key.split('_');
+  const photId  = +parts[0];
+  const phot    = PHOTOGRAPHERS.find(p => p.id === photId);
+  const restObj = RESTAURANTS.find(r => r.name === (rep.location || ''));
+  const supplies = restObj ? (RESTAURANT_SUPPLIES[restObj.id] || []) : [];
+
+  const esc = v => {
+    const s = v === undefined || v === null ? '' : String(v);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const rows = [];
+  rows.push(['PhotoShift Report']);
+  rows.push([]);
+  rows.push(['Field', 'Value']);
+  rows.push(['Date',        rep.date       || '']);
+  rows.push(['Photographer',phot ? phot.name : (rep.name || '')]);
+  rows.push(['Restaurant',  rep.location   || '']);
+  rows.push(['Total ($)',   rep.total      || '']);
+  rows.push(['Cash ($)',    rep.cash       || '']);
+  rows.push(['Cash Left ($)', rep.cashleft || '']);
+  rows.push(['C.C. Sale ($)', rep.ccsale   || '']);
+  rows.push(['C.C. Tip ($)',  rep.cctip    || '']);
+  rows.push(['Square Sale ($)', rep.sqsale || '']);
+  rows.push(['Square Tip ($)', rep.sqtip   || '']);
+  rows.push(['Commission ($)', rep.commission || '']);
+  rows.push(['Photo',       rep.photoName  || '']);
+  rows.push(['Comment',     rep.note       || '']);
+  rows.push([]);
+  if (supplies.length) {
+    rows.push(['Inventory Changes']);
+    rows.push(['Item', 'Open', 'Close', 'Diff']);
+    supplies.forEach((s, idx) => {
+      const o = oi[idx] !== undefined ? +oi[idx] : s.qty;
+      const c = ci[idx] !== undefined ? +ci[idx] : o;
+      rows.push([s.item, o, c, c - o]);
+    });
+  }
+
+  const csv = rows.map(r => r.map(esc).join(',')).join('\r\n');
+  const safeName = (phot ? phot.name : (rep.name || 'unknown')).replace(/\s+/g, '_');
+  const safeDate = (rep.date || 'nodate').replace(/\//g, '-');
+  _triggerDownload(`report_${safeName}_${safeDate}.csv`, csv);
+}
+
+function _fleetPeriodRange(period) {
+  const now   = new Date();
+  const y     = now.getFullYear();
+  const m     = now.getMonth();
+  const d     = now.getDate();
+  const dow   = now.getDay(); // 0=Sun
+  if (period === 'day') {
+    const start = new Date(y, m, d, 0, 0, 0, 0).getTime();
+    const end   = new Date(y, m, d, 23, 59, 59, 999).getTime();
+    return { start, end, label: now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) };
+  }
+  if (period === 'week') {
+    // Monday–Sunday week
+    const diff  = (dow === 0 ? -6 : 1 - dow);
+    const mon   = new Date(y, m, d + diff, 0, 0, 0, 0);
+    const sun   = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6, 23, 59, 59, 999);
+    return { start: mon.getTime(), end: sun.getTime(),
+      label: mon.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + sun.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) };
+  }
+  if (period === 'month') {
+    const start = new Date(y, m, 1, 0, 0, 0, 0).getTime();
+    const end   = new Date(y, m + 1, 0, 23, 59, 59, 999).getTime();
+    return { start, end, label: now.toLocaleDateString('en-US', { month:'long', year:'numeric' }) };
+  }
+  // year
+  const start = new Date(y, 0, 1, 0, 0, 0, 0).getTime();
+  const end   = new Date(y, 11, 31, 23, 59, 59, 999).getTime();
+  return { start, end, label: String(y) };
+}
+
+function _wfSortTs(key, wf) {
+  const parts   = key.split('_');
+  const dayIdx  = +parts[1];
+  const weekKey = parts.slice(2).join('_');
+  const rep     = wf.report || {};
+  if (rep.date && rep.date.includes('.')) {
+    const [dd, mm] = rep.date.split('.').map(Number);
+    const yyyy = weekKey ? +weekKey.slice(0, 4) : new Date().getFullYear();
+    return new Date(yyyy, mm - 1, dd).getTime();
+  }
+  if (weekKey) return new Date(weekKey).getTime() + dayIdx * 86400000;
+  return 0;
+}
+
+function generateFleetReport() {
+  const period  = _fleetPeriod;
+  const range   = _fleetPeriodRange(period);
+  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+  const closed  = Object.entries(SHIFT_WORKFLOWS)
+    .filter(([key, wf]) => {
+      if (wf.status !== 'closed' || !wf.report) return false;
+      const ts = _wfSortTs(key, wf);
+      return ts >= range.start && ts <= range.end;
+    })
+    .sort(([ka, wa], [kb, wb]) => _wfSortTs(kb, wb) - _wfSortTs(ka, wa));
+
+  if (!closed.length) {
+    alert(`No closed shift reports found for this ${period} (${range.label}).`);
+    return;
+  }
+
+  const fmt  = n => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtI = n => Math.round(n).toLocaleString();
+
+  // Build period-scoped aggregates from the already-filtered `closed` array
+  const byPhotMap = new Map();
+  const byRestMap = new Map();
+  PHOTOGRAPHERS.forEach(p  => byPhotMap.set(p.id,   { name: p.name,  shifts:0, hours:0, revenue:0, commission:0, framesSold:0 }));
+  RESTAURANTS.forEach(r    => byRestMap.set(r.id,   { name: r.name,  shifts:0, revenue:0, commission:0, framesSold:0 }));
+
+  closed.forEach(([key, wf]) => {
+    const rep   = wf.report || {};
+    const parts = key.split('_');
+    const photId  = +parts[0];
+    const dayIdx  = +parts[1];
+    const weekKey = parts.slice(2).join('_');
+    const phot    = PHOTOGRAPHERS.find(p => p.id === photId);
+    const restObj = RESTAURANTS.find(r => r.name === (rep.location || ''));
+
+    // Hours from shift schedule
+    let hours = 0;
+    const shiftArr = SHIFTS_BY_WEEK[weekKey] || (weekKey === dbGetWeekKey(_weekOffset) ? WEEKLY_SHIFTS : []);
+    const pName    = phot ? phot.name : (rep.name || '');
+    const allDays2 = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const shiftRow = shiftArr.find(s => s.photographer === pName && s.dayName === allDays2[dayIdx]);
+    if (shiftRow) hours = _statsParseHours(shiftRow.start, shiftRow.end);
+
+    // Frames from inventory
+    const supplyItems = restObj ? (RESTAURANT_SUPPLIES[restObj.id] || []) : [];
+    const oi2 = wf.openInv  || {};
+    const ci2 = wf.closeInv || {};
+    let framesSold = 0;
+    supplyItems.forEach((s, idx) => {
+      if (/frame/i.test(s.item)) {
+        const o = oi2[idx] !== undefined ? +oi2[idx] : s.qty;
+        const c = ci2[idx] !== undefined ? +ci2[idx] : o;
+        framesSold += Math.max(0, o - c);
+      }
+    });
+
+    const revenue    = +rep.total      || 0;
+    const commission = +rep.commission || 0;
+
+    // Aggregate by photographer
+    if (byPhotMap.has(photId)) {
+      const p = byPhotMap.get(photId);
+      p.shifts++; p.hours += hours; p.revenue += revenue; p.commission += commission; p.framesSold += framesSold;
+    } else if (phot) {
+      byPhotMap.set(photId, { name: phot.name, shifts:1, hours, revenue, commission, framesSold });
+    }
+    // Aggregate by restaurant
+    if (restObj && byRestMap.has(restObj.id)) {
+      const r = byRestMap.get(restObj.id);
+      r.shifts++; r.revenue += revenue; r.commission += commission; r.framesSold += framesSold;
+    } else if (restObj) {
+      byRestMap.set(restObj.id, { name: restObj.name, shifts:1, revenue, commission, framesSold });
+    }
+  });
+
+  // KPIs
+  let totalRev = 0, totalComm = 0, totalShifts = 0, totalFrames = 0;
+  byPhotMap.forEach(p => { totalRev += p.revenue; totalComm += p.commission; totalShifts += p.shifts; totalFrames += p.framesSold; });
+
+  // Photographer table rows (only those with at least one shift in period)
+  const photRows = [...byPhotMap.values()].filter(p => p.shifts > 0).sort((a,b) => b.revenue - a.revenue).map(p => {
+    const avgPrice = p.framesSold > 0 ? p.revenue / p.framesSold : 0;
+    const commHr   = p.hours > 0 ? p.commission / p.hours : 0;
+    return `<tr>
+      <td>${p.name}</td>
+      <td>${p.shifts}</td>
+      <td>${p.hours.toFixed(1)}</td>
+      <td>$${fmt(p.revenue)}</td>
+      <td>$${fmt(p.commission)}</td>
+      <td>${fmtI(p.framesSold)}</td>
+      <td>$${fmt(avgPrice)}</td>
+      <td>$${fmt(commHr)}/hr</td>
+    </tr>`;
+  }).join('');
+
+  // Restaurant table rows (only those with at least one shift in period)
+  const restRows = [...byRestMap.values()].filter(r => r.shifts > 0).sort((a,b) => b.revenue - a.revenue).map(r => {
+    const avgPrice = r.framesSold > 0 ? r.revenue / r.framesSold : 0;
+    return `<tr>
+      <td>${r.name}</td>
+      <td>${r.shifts}</td>
+      <td>$${fmt(r.revenue)}</td>
+      <td>$${fmt(r.commission)}</td>
+      <td>${fmtI(r.framesSold)}</td>
+      <td>$${fmt(avgPrice)}</td>
+    </tr>`;
+  }).join('');
+
+  // All reports log rows
+  const logRows = closed.map(([key, wf]) => {
+    const rep   = wf.report;
+    const parts = key.split('_');
+    const phot  = PHOTOGRAPHERS.find(p => p.id === +parts[0]);
+    const name  = phot ? phot.name : (rep.name || '—');
+    return `<tr>
+      <td>${rep.date || '—'}</td>
+      <td>${name}</td>
+      <td>${rep.location || '—'}</td>
+      <td>$${fmt(rep.total || 0)}</td>
+      <td>$${fmt(rep.cash || 0)}</td>
+      <td>$${fmt(rep.ccsale || 0)}</td>
+      <td>$${fmt(rep.sqsale || 0)}</td>
+      <td>$${fmt(rep.commission || 0)}</td>
+      <td>${rep.note || ''}</td>
+    </tr>`;
+  }).join('');
+
+  const now = new Date().toLocaleString();
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PhotoShift Fleet Report – ${period.charAt(0).toUpperCase()+period.slice(1)}ly</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f3f4f6;color:#111;padding:32px 24px}
+  h1{font-size:1.6rem;font-weight:800;color:#6c63ff;margin-bottom:4px}
+  .sub{font-size:0.82rem;color:#6b7280;margin-bottom:28px}
+  .kpi-bar{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px}
+  .kpi{background:#fff;border-radius:12px;padding:16px 22px;flex:1;min-width:150px;box-shadow:0 1px 4px #0001}
+  .kpi .val{font-size:1.5rem;font-weight:800;color:#6c63ff}
+  .kpi .lbl{font-size:0.72rem;color:#6b7280;text-transform:uppercase;margin-top:2px;font-weight:600}
+  section{margin-bottom:36px}
+  h2{font-size:1rem;font-weight:700;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #6c63ff22;color:#6c63ff}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px #0001}
+  th{background:#6c63ff;color:#fff;font-size:0.72rem;text-transform:uppercase;padding:8px 12px;text-align:left;font-weight:700}
+  td{font-size:0.82rem;padding:8px 12px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#faf9ff}
+  .footer{font-size:0.72rem;color:#9ca3af;margin-top:24px;text-align:center}
+</style>
+</head>
+<body>
+<h1>📸 PhotoShift Fleet Report</h1>
+<div style="font-size:1rem;font-weight:600;color:#374151;margin-bottom:4px">${period.charAt(0).toUpperCase()+period.slice(1)}ly &nbsp;·&nbsp; ${range.label}</div>
+<div class="sub">Generated ${now} &nbsp;·&nbsp; ${closed.length} shifts</div>
+
+<div class="kpi-bar">
+  <div class="kpi"><div class="val">${totalShifts}</div><div class="lbl">Total Shifts</div></div>
+  <div class="kpi"><div class="val">$${fmt(totalRev)}</div><div class="lbl">Total Revenue</div></div>
+  <div class="kpi"><div class="val">$${fmt(totalComm)}</div><div class="lbl">Total Commission</div></div>
+  <div class="kpi"><div class="val">${fmtI(totalFrames)}</div><div class="lbl">Frames Sold</div></div>
+  <div class="kpi"><div class="val">$${fmt(totalFrames > 0 ? totalRev / totalFrames : 0)}</div><div class="lbl">Avg $/Frame</div></div>
+</div>
+
+<section>
+<h2>Photographer Performance</h2>
+<table>
+  <thead><tr><th>Name</th><th>Shifts</th><th>Hours</th><th>Revenue</th><th>Commission</th><th>Frames</th><th>Avg$/Frame</th><th>$/Hr</th></tr></thead>
+  <tbody>${photRows}</tbody>
+</table>
+</section>
+
+<section>
+<h2>Restaurant Performance</h2>
+<table>
+  <thead><tr><th>Restaurant</th><th>Shifts</th><th>Revenue</th><th>Commission</th><th>Frames</th><th>Avg$/Frame</th></tr></thead>
+  <tbody>${restRows}</tbody>
+</table>
+</section>
+
+<section>
+<h2>All Shift Reports</h2>
+<table>
+  <thead><tr><th>Date</th><th>Photographer</th><th>Restaurant</th><th>Total</th><th>Cash</th><th>C.C.</th><th>Square</th><th>Commission</th><th>Comment</th></tr></thead>
+  <tbody>${logRows}</tbody>
+</table>
+</section>
+
+<div class="footer">PhotoShift Manager Dashboard &nbsp;·&nbsp; ${now}</div>
+</body>
+</html>`;
+
+  _triggerDownload(`photoshift_fleet_report_${period}.html`, html, 'text/html;charset=utf-8;');
 }
 
 // ─── STATS ───────────────────────────────────────────────────────────────────
@@ -2634,7 +3182,7 @@ function _statsAggregateAll() {
     byPhot.set(p.id, {
       name: p.name, color: p.color, initials: p.initials,
       shifts: 0, revenue: 0, hours: 0,
-      framesSold: 0, ribUsed: 0, lcUsed: 0,
+      framesSold: 0,
       cash: 0, cashleft: 0, cc: 0, ccTip: 0, sq: 0, sqTip: 0, commission: 0,
     });
   });
@@ -2643,7 +3191,7 @@ function _statsAggregateAll() {
   RESTAURANTS.forEach(r => {
     byRest.set(r.name, {
       name: r.name, id: r.id,
-      shifts: 0, revenue: 0, framesSold: 0, ribUsed: 0, lcUsed: 0,
+      shifts: 0, revenue: 0, framesSold: 0,
     });
   });
 
@@ -2657,9 +3205,19 @@ function _statsAggregateAll() {
 
     const rep    = wf.report || {};
     const revenue = +rep.total || 0;
-    const fs     = Math.max(0, (+rep.framesstart || 0) - (+rep.framesleft || 0));
-    const rib    = Math.max(0, (+rep.ribstart    || 0) - (+rep.ribleft   || 0));
-    const lc     = Math.max(0, (+rep.lcstart     || 0) - (+rep.lcleft    || 0));
+    // Derive frames sold from supply item changes (items whose name includes "Frame")
+    const restObj2 = RESTAURANTS.find(r => r.name === (rep.location || ''));
+    const supplyItems = restObj2 ? (RESTAURANT_SUPPLIES[restObj2.id] || []) : [];
+    const oi2 = wf.openInv  || {};
+    const ci2 = wf.closeInv || {};
+    let fs = 0;
+    supplyItems.forEach((s, idx) => {
+      if (/frame/i.test(s.item)) {
+        const o = oi2[idx] !== undefined ? +oi2[idx] : s.qty;
+        const c = ci2[idx] !== undefined ? +ci2[idx] : o;
+        fs += Math.max(0, o - c);
+      }
+    });
 
     // Hours from SHIFTS_BY_WEEK or WEEKLY_SHIFTS
     const shiftArr = SHIFTS_BY_WEEK[weekKey] || (weekKey === dbGetWeekKey(_weekOffset) ? WEEKLY_SHIFTS : []);
@@ -2677,8 +3235,6 @@ function _statsAggregateAll() {
       ps.revenue    += revenue;
       ps.hours      += hrs;
       ps.framesSold += fs;
-      ps.ribUsed    += rib;
-      ps.lcUsed     += lc;
       ps.cash       += +rep.cash       || 0;
       ps.cashleft   += +rep.cashleft   || 0;
       ps.cc         += +rep.ccsale     || 0;
@@ -2694,8 +3250,6 @@ function _statsAggregateAll() {
       rs.shifts++;
       rs.revenue    += revenue;
       rs.framesSold += fs;
-      rs.ribUsed    += rib;
-      rs.lcUsed     += lc;
     }
   });
 
@@ -2748,28 +3302,8 @@ function renderStats() {
     const sorted = [...byPhot.values()].sort((a, b) => b.revenue - a.revenue);
     const cards = sorted.map(p => {
       const avgPhoto  = p.framesSold > 0 ? (p.revenue / p.framesSold) : 0;
-      const hrsStr    = p.hours > 0 ? p.hours.toFixed(1) + 'h' : '—';
-      const revPerHr  = p.hours > 0 ? (p.revenue / p.hours) : 0;
-
-      // Payment breakdown bar
-      const total = p.cash + p.cc + p.sq;
-      const cashPct = total > 0 ? Math.round(p.cash / total * 100) : 0;
-      const ccPct   = total > 0 ? Math.round(p.cc   / total * 100) : 0;
-      const sqPct   = total > 0 ? Math.max(0, 100 - cashPct - ccPct) : 0;
-      const breakdownBar = total > 0 ? `
-        <div style="margin-top:10px">
-          <div style="font-size:0.62rem;color:var(--muted);font-weight:600;margin-bottom:4px">PAYMENT MIX</div>
-          <div style="display:flex;border-radius:4px;overflow:hidden;height:6px;gap:1px">
-            ${cashPct > 0 ? `<div style="width:${cashPct}%;background:#22c98a;border-radius:2px"></div>` : ''}
-            ${ccPct   > 0 ? `<div style="width:${ccPct}%;background:#6c63ff;border-radius:2px"></div>` : ''}
-            ${sqPct   > 0 ? `<div style="width:${sqPct}%;background:#f59e0b;border-radius:2px"></div>` : ''}
-          </div>
-          <div style="display:flex;gap:10px;margin-top:4px">
-            <span style="font-size:0.62rem;color:var(--muted)"><span style="color:#22c98a;font-weight:700">●</span> Cash ${cashPct}%</span>
-            <span style="font-size:0.62rem;color:var(--muted)"><span style="color:#6c63ff;font-weight:700">●</span> C.C. ${ccPct}%</span>
-            <span style="font-size:0.62rem;color:var(--muted)"><span style="color:#f59e0b;font-weight:700">●</span> Square ${sqPct}%</span>
-          </div>
-        </div>` : '';
+      const hrsStr      = p.hours > 0 ? p.hours.toFixed(1) + 'h' : '—';
+      const commPerHr   = p.hours > 0 ? (p.commission / p.hours) : 0;
 
       const hasData = p.shifts > 0;
       return `
@@ -2793,7 +3327,7 @@ function renderStats() {
             </div>
             <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
               <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">$/HR</div>
-              <div style="font-size:0.95rem;font-weight:700">${revPerHr > 0 ? '$' + revPerHr.toFixed(0) : '—'}</div>
+              <div style="font-size:0.95rem;font-weight:700">${commPerHr > 0 ? '$' + commPerHr.toFixed(2) : '—'}</div>
             </div>
             <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
               <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">PHOTOS</div>
@@ -2804,25 +3338,6 @@ function renderStats() {
               <div style="font-size:0.95rem;font-weight:700;color:${avgPhoto>0?'#6c63ff':'var(--text)'}">${avgPhoto > 0 ? '$' + avgPhoto.toFixed(2) : '—'}</div>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px">
-            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
-              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">CASH</div>
-              <div style="font-size:0.88rem;font-weight:700;color:#22c98a">${p.cash > 0 ? '$'+p.cash.toLocaleString() : '—'}</div>
-            </div>
-            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
-              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">C.C.</div>
-              <div style="font-size:0.88rem;font-weight:700;color:#6c63ff">${p.cc > 0 ? '$'+p.cc.toLocaleString() : '—'}</div>
-            </div>
-            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
-              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">SQUARE</div>
-              <div style="font-size:0.88rem;font-weight:700;color:#f59e0b">${p.sq > 0 ? '$'+p.sq.toLocaleString() : '—'}</div>
-            </div>
-            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
-              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">COMMISSION</div>
-              <div style="font-size:0.88rem;font-weight:700;color:#ff6584">${p.commission > 0 ? '$'+p.commission.toLocaleString() : '—'}</div>
-            </div>
-          </div>
-          ${breakdownBar}
           ` : ''}
         </div>`;
     }).join('');
@@ -2879,17 +3394,6 @@ function renderStats() {
               <div style="font-size:0.95rem;font-weight:700;color:${avgPhoto>0?'#6c63ff':'var(--text)'}">${avgPhoto > 0 ? '$' + avgPhoto.toFixed(2) : '—'}</div>
             </div>
           </div>
-          ${(r.ribUsed > 0 || r.lcUsed > 0) ? `
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
-              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">RIB/PAPER USED</div>
-              <div style="font-size:0.95rem;font-weight:700">${r.ribUsed > 0 ? r.ribUsed : '—'}</div>
-            </div>
-            <div style="background:var(--card2);border-radius:8px;padding:9px;text-align:center">
-              <div style="font-size:0.6rem;color:var(--muted);font-weight:600;margin-bottom:3px">LIVE COUNTER Δ</div>
-              <div style="font-size:0.95rem;font-weight:700">${r.lcUsed > 0 ? r.lcUsed : '—'}</div>
-            </div>
-          </div>` : ''}
           ` : `<div style="font-size:0.8rem;color:var(--muted);font-style:italic;margin-top:4px">No closed shifts yet</div>`}
         </div>`;
     }).join('');
